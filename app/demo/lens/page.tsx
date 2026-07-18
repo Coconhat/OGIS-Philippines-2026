@@ -17,20 +17,19 @@ export default function LensPage() {
       </header>
 
       {/* Weekly narrative */}
-      <section className="wallpaper rounded-card p-6 shadow-pop">
-        <p className="glass inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold tracking-widest uppercase text-accent-deep">
+      <section className="rounded-card border border-line bg-surface p-6 shadow-card">
+        <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-extrabold tracking-widest uppercase text-accent-deep">
           <IconSparkle size={13} />
           This week's story
         </p>
-        <p className="mt-4 text-[17px] leading-relaxed font-extrabold text-white drop-shadow-sm">
-          Short-video apps took 9.5 hours this week, mostly between 11pm and
-          1am. That's your most compulsive app —{" "}
-          <span className="underline decoration-white/60 decoration-4 underline-offset-4">
-            70% of opens
-          </span>{" "}
-          had no notification behind them.
+        <p className="mt-4 text-[17px] leading-relaxed font-extrabold text-ink">
+          Short-video apps took{" "}
+          <span className="text-accent-deep">9.5 hours</span> this week, mostly
+          between 11pm and 1am. That's your most compulsive app —{" "}
+          <span className="text-coral">70% of opens</span> had no notification
+          behind them.
         </p>
-        <p className="mt-3 text-sm font-bold text-white/85">
+        <p className="mt-3 text-sm font-semibold text-ink-soft">
           Your phone didn't call you. You went anyway. That's the habit AFK
           Missions are built from.
         </p>

@@ -30,39 +30,33 @@ export default function DemoHome() {
       </header>
 
       {/* AFK toggle card */}
-      <section
-        className={`rounded-card p-6 text-center transition-all duration-500 ${
-          afkOn ? "wallpaper shadow-pop" : "bg-surface border border-line shadow-card"
-        }`}
-      >
+      <section className="rounded-card border border-line bg-surface p-6 text-center shadow-card">
         <div
-          className={`mx-auto mb-4 grid size-20 place-items-center rounded-full transition-colors duration-500 ${
-            afkOn ? "glass text-accent-deep animate-breathe" : "wallpaper text-white shadow-card"
+          className={`wallpaper mx-auto mb-4 grid size-20 place-items-center rounded-full text-white shadow-card ${
+            afkOn ? "animate-breathe" : ""
           }`}
         >
           <IconMoon size={34} strokeWidth={2.2} />
         </div>
         {afkOn ? (
           <>
-            <p className="text-lg font-black text-white drop-shadow-sm">
-              AFK is holding your place
-            </p>
-            <p className="mt-1 text-sm font-bold text-white/85">
+            <p className="text-lg font-black">AFK is holding your place</p>
+            <p className="mt-1 text-sm font-bold text-accent-deep">
               Level {level} · {activeLevel.name} · until 7:00pm
             </p>
             <div className="mt-4 flex items-center justify-center gap-2.5 text-xs font-extrabold text-ink">
-              <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5">
                 <IconBellOff size={13} className="text-accent-deep" />
                 {5 + handled.length} handled
               </span>
-              <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5">
                 <IconZap size={13} className="text-accent-deep" />
                 0 interruptions
               </span>
             </div>
             <button
               onClick={() => setAfkOn(false)}
-              className="mt-5 w-full cursor-pointer rounded-full bg-white py-3.5 font-extrabold text-accent-deep shadow-card transition-transform duration-200 active:scale-[0.98]"
+              className="mt-5 w-full cursor-pointer rounded-full bg-ink py-3.5 font-extrabold text-white transition-colors duration-200 hover:bg-night-2 active:scale-[0.99]"
             >
               I'm back
             </button>
@@ -90,19 +84,23 @@ export default function DemoHome() {
         <p className="mt-0.5 text-xs font-semibold text-ink-soft">
           How much can AFK do on your behalf?
         </p>
-        <div className="mt-3 grid grid-cols-4 gap-1.5">
+        <div className="mt-3 grid grid-cols-4 gap-1 rounded-2xl bg-canvas p-1">
           {autonomyLadder.map((l) => (
             <button
               key={l.level}
               onClick={() => setLevel(l.level)}
               aria-pressed={level === l.level}
-              className={`cursor-pointer rounded-bubble py-2.5 text-center transition-all duration-200 ${
+              className={`cursor-pointer rounded-xl py-2.5 text-center transition-all duration-200 ${
                 level === l.level
-                  ? "wallpaper text-white shadow-card"
-                  : "bg-canvas text-ink-soft hover:bg-line/60"
+                  ? "bg-surface text-ink shadow-card"
+                  : "text-ink-faint hover:text-ink-soft"
               }`}
             >
-              <span className={`block text-sm font-black ${level === l.level ? "text-white" : ""}`}>
+              <span
+                className={`block text-sm font-black ${
+                  level === l.level ? "text-accent-deep" : ""
+                }`}
+              >
                 L{l.level}
               </span>
               <span className="block text-[10px] font-bold leading-tight">

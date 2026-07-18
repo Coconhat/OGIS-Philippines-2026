@@ -453,7 +453,7 @@ export default function Landing() {
                     Try the interactive demo
                   </Link>
                   <p className="text-[13px] font-bold text-ink-faint">
-                    Requires an iPhone — and somewhere better to be.
+                    Requires a phone — and somewhere better to be.
                   </p>
                 </div>
               </div>

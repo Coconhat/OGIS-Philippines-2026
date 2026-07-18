@@ -35,11 +35,17 @@ function StatusBar() {
         Exit demo
       </Link>
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold transition-colors duration-300 ${
-          afkOn ? "wallpaper text-white shadow-card" : "bg-surface border border-line text-ink-faint"
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-extrabold transition-colors duration-300 ${
+          afkOn
+            ? "border-line bg-surface text-ink shadow-card"
+            : "border-line bg-surface text-ink-faint"
         }`}
       >
-        <IconMoon size={12} />
+        {afkOn ? (
+          <span className="size-2 rounded-full bg-accent animate-pulse-dot" />
+        ) : (
+          <IconMoon size={12} />
+        )}
         {afkOn ? "AFK · holding your place" : "Online"}
       </span>
     </div>
