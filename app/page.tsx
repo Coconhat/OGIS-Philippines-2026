@@ -138,11 +138,14 @@ export default function Landing() {
   useEffect(() => {
     const deck = deckRef.current;
     if (!deck) return;
+    // Mobile is a plain vertical page — no horizontal hijacking below lg.
+    const mq = window.matchMedia("(min-width: 1024px)");
     targetRef.current = deck.scrollLeft;
 
     const maxLeft = () => deck.scrollWidth - deck.clientWidth;
 
     const onWheel = (e: WheelEvent) => {
+      if (!mq.matches) return;
       const vertical = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
       // Let a slide finish its own vertical scroll before gliding sideways.
       if (vertical) {
@@ -165,6 +168,7 @@ export default function Landing() {
     };
 
     const onKey = (e: KeyboardEvent) => {
+      if (!mq.matches) return;
       if (e.key === "ArrowRight" || e.key === "PageDown")
         go(idxRef.current + 1);
       if (e.key === "ArrowLeft" || e.key === "PageUp") go(idxRef.current - 1);
@@ -192,7 +196,7 @@ export default function Landing() {
   }, [go, kick]);
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden">
+    <div className="relative w-full lg:h-dvh lg:overflow-hidden">
       {/* Nav */}
       <header className="absolute inset-x-0 top-0 z-40 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
         <Wordmark />
@@ -210,16 +214,16 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Horizontal deck — free smooth glide, no snapping */}
+      {/* Vertical page on mobile; free-gliding horizontal deck on desktop */}
       <div
         ref={deckRef}
-        className="carousel h-full w-full"
+        className="carousel w-full max-lg:flex-col max-lg:overflow-visible lg:h-full"
         style={{ scrollSnapType: "none" }}
       >
         {/* Slide 1 — Hero */}
-        <section className="h-full w-screen">
-          <div data-scroll className="h-full overflow-y-auto">
-            <div className="mx-auto grid min-h-full w-full max-w-6xl items-center gap-10 px-5 pt-24 pb-20 lg:grid-cols-2 lg:gap-8 lg:pt-16">
+        <section className="w-screen lg:h-full">
+          <div data-scroll className="lg:h-full lg:overflow-y-auto">
+            <div className="mx-auto grid min-h-dvh w-full max-w-6xl items-center gap-10 px-5 pt-24 pb-20 lg:grid-cols-2 lg:gap-8 lg:pt-16">
               <div className="text-center lg:order-2 lg:text-left">
                 <p className="inline-flex items-center gap-2 text-sm font-bold text-ink-soft">
                   Now in private beta
@@ -261,9 +265,9 @@ export default function Landing() {
         </section>
 
         {/* Slide 2 — Features, two rows like the inspo */}
-        <section className="h-full w-screen">
-          <div data-scroll className="h-full overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col justify-center px-5 pt-24 pb-20 lg:pt-20">
+        <section className="w-screen lg:h-full">
+          <div data-scroll className="lg:h-full lg:overflow-y-auto">
+            <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center px-5 pt-24 pb-20 lg:pt-20">
               <h2 className="text-center text-[1.9rem] leading-tight font-black tracking-tight sm:text-4xl">
                 It's got you covered.
               </h2>
@@ -293,9 +297,9 @@ export default function Landing() {
         </section>
 
         {/* Slide 3 — See it in action (white, like the hero) */}
-        <section className="h-full w-screen">
-          <div data-scroll className="h-full overflow-y-auto">
-            <div className="mx-auto grid min-h-full w-full max-w-6xl items-center gap-10 px-5 pt-24 pb-20 lg:grid-cols-2 lg:pt-16">
+        <section className="w-screen lg:h-full">
+          <div data-scroll className="lg:h-full lg:overflow-y-auto">
+            <div className="mx-auto grid min-h-dvh w-full max-w-6xl items-center gap-10 px-5 pt-24 pb-20 lg:grid-cols-2 lg:pt-16">
               <div className="text-center lg:text-left">
                 <h2 className="text-[2.2rem] leading-[1.05] font-black tracking-tight sm:text-5xl">
                   See it hold
@@ -349,9 +353,9 @@ export default function Landing() {
         </section>
 
         {/* Slide 4 — Pricing + footer */}
-        <section className="h-full w-screen">
-          <div data-scroll className="h-full overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col justify-center px-5 pt-24 pb-20 lg:pt-20">
+        <section className="w-screen lg:h-full">
+          <div data-scroll className="lg:h-full lg:overflow-y-auto">
+            <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center px-5 pt-24 pb-20 lg:pt-20">
               <div className="text-center">
                 <h2 className="text-[1.9rem] leading-tight font-black tracking-tight sm:text-4xl">
                   Simple, like it should be.
@@ -428,9 +432,9 @@ export default function Landing() {
         </section>
 
         {/* Slide 5 — The end page, Keeby style */}
-        <section className="h-full w-screen">
-          <div data-scroll className="h-full overflow-y-auto">
-            <div className="mx-auto grid min-h-full w-full max-w-6xl content-center gap-12 px-5 pt-24 pb-20 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-8">
+        <section className="w-screen lg:h-full">
+          <div data-scroll className="lg:h-full lg:overflow-y-auto">
+            <div className="mx-auto grid min-h-dvh w-full max-w-6xl content-center gap-12 px-5 pt-24 pb-20 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-8">
               <div className="text-center lg:text-left">
                 <h2 className="text-[2.6rem] leading-[1.05] font-black tracking-tight sm:text-6xl">
                   Try it.
@@ -478,7 +482,7 @@ export default function Landing() {
       {/* Slide dots */}
       <nav
         aria-label="Sections"
-        className="absolute bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-surface/90 px-3.5 py-2 shadow-card backdrop-blur"
+        className="absolute bottom-4 left-1/2 z-40 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-surface/90 px-3.5 py-2 shadow-card backdrop-blur lg:flex"
       >
         {["Home", "Features", "Demo", "Pricing", "Get it"].map((label, i) => (
           <button
