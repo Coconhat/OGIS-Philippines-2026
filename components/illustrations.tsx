@@ -14,18 +14,21 @@ const frame = {
 export function BellIllo() {
   return (
     <svg viewBox="0 0 200 120" style={frame} aria-hidden>
+      <g className="anim-swing">
+        <path
+          d="M100 22c-20 0-32 14-32 32 0 22-8 28-12 32h88c-4-4-12-10-12-32 0-18-12-32-32-32z"
+          fill={g1}
+        />
+        <path
+          d="M100 22c-20 0-32 14-32 32 0 22-8 28-12 32h44V22z"
+          fill={g2}
+          opacity="0.5"
+        />
+        <rect x="90" y="92" width="20" height="10" rx="5" fill={g2} />
+      </g>
+      <circle className="anim-pop" cx="130" cy="34" r="12" fill={orange} />
       <path
-        d="M100 22c-20 0-32 14-32 32 0 22-8 28-12 32h88c-4-4-12-10-12-32 0-18-12-32-32-32z"
-        fill={g1}
-      />
-      <path
-        d="M100 22c-20 0-32 14-32 32 0 22-8 28-12 32h44V22z"
-        fill={g2}
-        opacity="0.5"
-      />
-      <rect x="90" y="92" width="20" height="10" rx="5" fill={g2} />
-      <circle cx="130" cy="34" r="12" fill={orange} />
-      <path
+        className="anim-pulse"
         d="M148 26c4 5 6 11 6 17M156 18c6 7 9 16 9 25"
         stroke={orangeSoft}
         strokeWidth="5"
@@ -45,20 +48,24 @@ export function BubblesIllo() {
       />
       <rect x="48" y="42" width="56" height="7" rx="3.5" fill={g3} />
       <rect x="48" y="55" width="36" height="7" rx="3.5" fill={g3} opacity="0.6" />
-      <path
-        d="M112 62h52a10 10 0 0 1 10 10v12a10 10 0 0 1-10 10h-6v10l-14-10h-32a10 10 0 0 1-10-10V72a10 10 0 0 1 10-10z"
-        fill={orange}
-      />
-      <rect x="114" y="74" width="40" height="6" rx="3" fill="#fff" opacity="0.85" />
-      <circle cx="163" cy="55" r="9" fill={orangeSoft} />
-      <path
-        d="M159.5 55l2.5 2.5 5-5"
-        stroke="#e07300"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
+      <g className="anim-bob">
+        <path
+          d="M112 62h52a10 10 0 0 1 10 10v12a10 10 0 0 1-10 10h-6v10l-14-10h-32a10 10 0 0 1-10-10V72a10 10 0 0 1 10-10z"
+          fill={orange}
+        />
+        <rect x="114" y="74" width="40" height="6" rx="3" fill="#fff" opacity="0.85" />
+      </g>
+      <g className="anim-pop">
+        <circle cx="163" cy="55" r="9" fill={orangeSoft} />
+        <path
+          d="M159.5 55l2.5 2.5 5-5"
+          stroke="#e07300"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </g>
     </svg>
   );
 }
@@ -79,6 +86,7 @@ export function CallIllo() {
         fill="none"
       />
       <path
+        className="anim-pulse"
         d="M118 44c8 8 8 24 0 32"
         stroke={orange}
         strokeWidth="7"

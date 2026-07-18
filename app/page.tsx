@@ -59,13 +59,34 @@ const features = [
 ];
 
 const vignette = [
-  { who: "FlashDeals", msg: "48-HOUR SALE — everything must go!", tag: "Muted", cls: "bg-canvas text-ink-soft" },
-  { who: "Priya · Slack", msg: "“which Figma file is the latest?”", tag: "Replied", cls: "bg-sky-soft text-sky" },
-  { who: "Dentist · SMS", msg: "“Reply YES to confirm tomorrow 9:00”", tag: "Confirmed", cls: "bg-mint-soft text-mint" },
-  { who: "Mom", msg: "“Call me when you see this.”", tag: "Rang through", cls: "bg-coral text-white", hot: true },
+  {
+    who: "FlashDeals",
+    msg: "48-HOUR SALE — everything must go!",
+    tag: "Muted",
+    cls: "bg-canvas text-ink-soft",
+  },
+  {
+    who: "Priya · Slack",
+    msg: "“which Figma file is the latest?”",
+    tag: "Replied",
+    cls: "bg-sky-soft text-sky",
+  },
+  {
+    who: "Dentist · SMS",
+    msg: "“Reply YES to confirm tomorrow 9:00”",
+    tag: "Confirmed",
+    cls: "bg-mint-soft text-mint",
+  },
+  {
+    who: "Mom",
+    msg: "“Call me when you see this.”",
+    tag: "Rang through",
+    cls: "bg-coral text-white",
+    hot: true,
+  },
 ];
 
-const SLIDES = 4;
+const SLIDES = 5;
 
 function Wordmark() {
   return (
@@ -82,25 +103,48 @@ export default function Landing() {
   const deckRef = useRef<HTMLDivElement>(null);
   const [idx, setIdx] = useState(0);
   const idxRef = useRef(0);
-  const lockRef = useRef(0);
+  const targetRef = useRef(0);
+  const rafRef = useRef(0);
 
-  const go = useCallback((i: number) => {
+  // Smooth, continuous horizontal scroll: wheel input moves a target,
+  // a lerp loop eases the deck toward it (Keeby-style glide, no snapping).
+  const kick = useCallback(() => {
     const deck = deckRef.current;
-    if (!deck) return;
-    const next = Math.max(0, Math.min(SLIDES - 1, i));
-    idxRef.current = next;
-    setIdx(next);
-    deck.scrollTo({ left: next * deck.clientWidth, behavior: "smooth" });
+    if (!deck || rafRef.current) return;
+    const tick = () => {
+      const d = targetRef.current - deck.scrollLeft;
+      if (Math.abs(d) > 0.5) {
+        deck.scrollLeft += d * 0.11;
+        rafRef.current = requestAnimationFrame(tick);
+      } else {
+        deck.scrollLeft = targetRef.current;
+        rafRef.current = 0;
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
   }, []);
+
+  const go = useCallback(
+    (i: number) => {
+      const deck = deckRef.current;
+      if (!deck) return;
+      targetRef.current =
+        Math.max(0, Math.min(SLIDES - 1, i)) * deck.clientWidth;
+      kick();
+    },
+    [kick],
+  );
 
   useEffect(() => {
     const deck = deckRef.current;
     if (!deck) return;
+    targetRef.current = deck.scrollLeft;
+
+    const maxLeft = () => deck.scrollWidth - deck.clientWidth;
 
     const onWheel = (e: WheelEvent) => {
       const vertical = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
-      const delta = vertical ? e.deltaY : e.deltaX;
-      // Let a slide finish its own vertical scroll before paging.
+      // Let a slide finish its own vertical scroll before gliding sideways.
       if (vertical) {
         const slide = deck.children[idxRef.current] as HTMLElement | undefined;
         const inner = slide?.querySelector<HTMLElement>("[data-scroll]");
@@ -112,19 +156,23 @@ export default function Landing() {
         }
       }
       e.preventDefault();
-      const now = Date.now();
-      if (Math.abs(delta) < 10 || now - lockRef.current < 650) return;
-      lockRef.current = now;
-      go(idxRef.current + (delta > 0 ? 1 : -1));
+      const delta = vertical ? e.deltaY : e.deltaX;
+      targetRef.current = Math.max(
+        0,
+        Math.min(maxLeft(), targetRef.current + delta * 1.7),
+      );
+      kick();
     };
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "PageDown") go(idxRef.current + 1);
+      if (e.key === "ArrowRight" || e.key === "PageDown")
+        go(idxRef.current + 1);
       if (e.key === "ArrowLeft" || e.key === "PageUp") go(idxRef.current - 1);
     };
 
-    // Keep the dots honest when the user swipes natively (touch).
     const onScroll = () => {
+      // Touch/native scrolls move the deck directly — keep the target synced.
+      if (!rafRef.current) targetRef.current = deck.scrollLeft;
       const i = Math.round(deck.scrollLeft / deck.clientWidth);
       if (i !== idxRef.current) {
         idxRef.current = i;
@@ -139,8 +187,9 @@ export default function Landing() {
       deck.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       deck.removeEventListener("scroll", onScroll);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [go]);
+  }, [go, kick]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
@@ -158,20 +207,14 @@ export default function Landing() {
           >
             Try it
           </Link>
-          <button
-            onClick={() => go(3)}
-            className="cursor-pointer rounded-full bg-ink px-5 py-2.5 text-sm font-extrabold text-white transition-colors duration-200 hover:bg-night-2"
-          >
-            Get AFK
-          </button>
         </div>
       </header>
 
-      {/* Horizontal deck */}
+      {/* Horizontal deck — free smooth glide, no snapping */}
       <div
         ref={deckRef}
         className="carousel h-full w-full"
-        style={{ scrollSnapType: "x mandatory" }}
+        style={{ scrollSnapType: "none" }}
       >
         {/* Slide 1 — Hero */}
         <section className="h-full w-screen">
@@ -199,9 +242,6 @@ export default function Landing() {
                     Try the interactive demo
                     <IconArrowRight size={19} />
                   </Link>
-                  <p className="text-[13px] font-bold text-ink-faint">
-                    Free while in beta · everything stays on your phone
-                  </p>
                 </div>
               </div>
               <div className="relative lg:order-1">
@@ -277,14 +317,15 @@ export default function Landing() {
                 </p>
               </div>
               <div className="space-y-3">
-                {vignette.map((n) => (
+                {vignette.map((n, i) => (
                   <div
                     key={n.who}
-                    className={`flex items-center justify-between gap-3 rounded-2xl px-5 py-4 shadow-card ${
+                    className={`vign-card flex items-center justify-between gap-3 rounded-2xl px-5 py-4 shadow-card ${
                       n.hot
                         ? "border border-coral/40 bg-coral-soft"
                         : "border border-line bg-surface"
                     }`}
+                    style={{ animationDelay: `${i * 0.55}s` }}
                   >
                     <div className="min-w-0">
                       <p className="text-[14px] font-extrabold text-ink">
@@ -295,7 +336,8 @@ export default function Landing() {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold ${n.cls}`}
+                      className={`vign-pill shrink-0 rounded-full px-3 py-1.5 text-[11.5px] font-extrabold ${n.cls}`}
+                      style={{ animationDelay: `${i * 0.55 + 0.35}s` }}
                     >
                       {n.tag}
                     </span>
@@ -381,14 +423,51 @@ export default function Landing() {
                 </span>{" "}
                 turns “right to disconnect” from a policy into a habit.
               </p>
-              <footer className="mt-10 flex flex-col items-center gap-2 text-center">
-                <Wordmark />
-                <p className="text-[13px] font-semibold text-ink-soft">
-                  The best notification is the one you never got.
+            </div>
+          </div>
+        </section>
+
+        {/* Slide 5 — The end page, Keeby style */}
+        <section className="h-full w-screen">
+          <div data-scroll className="h-full overflow-y-auto">
+            <div className="mx-auto grid min-h-full w-full max-w-6xl content-center gap-12 px-5 pt-24 pb-20 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-8">
+              <div className="text-center lg:text-left">
+                <h2 className="text-[2.6rem] leading-[1.05] font-black tracking-tight sm:text-6xl">
+                  Try it.
+                  <br />
+                  You'll feel the difference.
+                </h2>
+                <p className="mx-auto mt-5 max-w-[40ch] text-[16px] font-semibold text-ink-soft lg:mx-0">
+                  Made by Team x-03 for OGIS 2026.
                 </p>
-                <p className="text-xs font-bold text-ink-faint">
-                  Made by Team x-o3 · concept demo — every message here is
-                  simulated, nothing is ever sent.
+                <div className="mt-8 flex flex-col items-center gap-3 lg:items-start">
+                  <Link
+                    href="/demo"
+                    className="inline-flex items-center gap-2.5 rounded-full bg-ink px-8 py-4 text-[17px] font-extrabold text-white shadow-pop transition-all duration-200 hover:bg-night-2 hover:shadow-card"
+                  >
+                    <IconMoon size={19} />
+                    Try the interactive demo
+                  </Link>
+                  <p className="text-[13px] font-bold text-ink-faint">
+                    Requires an iPhone — and somewhere better to be.
+                  </p>
+                </div>
+              </div>
+              <footer className="flex flex-col items-center gap-2.5 text-[14px] font-bold text-ink-soft lg:items-end lg:text-right">
+                <p className="text-ink-faint">© 2026 AFK · Team x-o3</p>
+                {["Updates", "Privacy", "Support", "App Store"].map((l) => (
+                  <a
+                    key={l}
+                    href="#"
+                    onClick={(e) => e.preventDefault()}
+                    className="transition-colors duration-150 hover:text-ink"
+                  >
+                    {l}
+                  </a>
+                ))}
+                <p className="mt-3 max-w-[34ch] text-xs font-semibold text-ink-faint lg:text-right">
+                  Concept demo — every message here is simulated, nothing is
+                  ever sent.
                 </p>
               </footer>
             </div>
@@ -401,14 +480,16 @@ export default function Landing() {
         aria-label="Sections"
         className="absolute bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-line bg-surface/90 px-3.5 py-2 shadow-card backdrop-blur"
       >
-        {["Home", "Features", "Demo", "Pricing"].map((label, i) => (
+        {["Home", "Features", "Demo", "Pricing", "Get it"].map((label, i) => (
           <button
             key={label}
             onClick={() => go(i)}
             aria-label={label}
             aria-current={idx === i ? "true" : undefined}
             className={`cursor-pointer rounded-full transition-all duration-300 ${
-              idx === i ? "h-2 w-6 bg-accent" : "size-2 bg-line hover:bg-ink-faint"
+              idx === i
+                ? "h-2 w-6 bg-accent"
+                : "size-2 bg-line hover:bg-ink-faint"
             }`}
           />
         ))}
