@@ -1,20 +1,20 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { AfkProvider, useAfk } from "@/lib/afk-context";
+import { DemoShellContext } from "@/lib/demo-shell";
+import { briefingDecisions } from "@/lib/data";
+import { TabBar, type Tab } from "@/components/ui/tab-bar";
 import {
   IconChart,
   IconHome,
   IconInbox,
-  IconMoon,
   IconShield,
   IconTarget,
-  IconX,
 } from "@/components/icons";
 
-const tabs = [
+const tabs: Tab[] = [
   { href: "/demo", label: "Home", icon: IconHome },
   { href: "/demo/triage", label: "Triage", icon: IconShield },
   { href: "/demo/lens", label: "Lens", icon: IconChart },
@@ -22,70 +22,81 @@ const tabs = [
   { href: "/demo/briefing", label: "Briefing", icon: IconInbox },
 ];
 
-function StatusBar() {
-  const { afkOn } = useAfk();
+/* The iOS in-call/recording treatment: a slim strip above the nav bar
+   that only exists while a session is running. An active AFK session
+   is exactly that kind of ambient state. */
+function SessionStrip() {
+  const { afkOn, afkUntil } = useAfk();
+
   return (
-    <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-canvas/90 px-5 pt-[calc(env(safe-area-inset-top)+10px)] pb-2.5 backdrop-blur">
-      <Link
-        href="/"
-        aria-label="Exit demo, back to landing page"
-        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-ink-soft transition-colors hover:text-ink"
+    <div
+      className={`material-bar z-40 shrink-0 overflow-hidden transition-[height,opacity] duration-300 ease-ios ${
+        afkOn ? "h-7 opacity-100" : "h-0 opacity-0"
+      }`}
+    >
+      <p
+        aria-live="polite"
+        className="text-caption flex h-7 items-center justify-center gap-1.5 text-accent-text"
       >
-        <IconX size={13} />
-        Exit demo
-      </Link>
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-extrabold transition-colors duration-300 ${
-          afkOn
-            ? "border-line bg-surface text-ink shadow-card"
-            : "border-line bg-surface text-ink-faint"
-        }`}
-      >
-        {afkOn ? (
-          <span className="size-2 rounded-full bg-accent animate-pulse-dot" />
-        ) : (
-          <IconMoon size={12} />
-        )}
-        {afkOn ? "AFK · holding your place" : "Online"}
-      </span>
+        <span className="size-1.5 rounded-pill bg-accent animate-pulse-dot" />
+        {afkOn ? `AFK · holding your place until ${afkUntil}` : ""}
+      </p>
     </div>
   );
 }
 
-function BottomNav() {
+function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const { decisions } = useAfk();
+
+  const shell = useMemo(() => ({ scrollRef }), []);
+
+  const undecided = briefingDecisions.filter((d) => !decisions[d.id]).length;
+  const withBadge = tabs.map((t) =>
+    t.href === "/demo/briefing" ? { ...t, badge: undecided } : t,
+  );
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[430px] border-t border-line bg-surface/95 pb-[calc(env(safe-area-inset-bottom)+6px)] backdrop-blur">
-      <div className="grid grid-cols-5">
-        {tabs.map((t) => {
-          const active = pathname === t.href;
-          return (
-            <Link
-              key={t.href}
-              href={t.href}
-              aria-current={active ? "page" : undefined}
-              className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-[10px] font-extrabold transition-colors duration-200 ${
-                active ? "text-accent-deep" : "text-ink-faint hover:text-ink-soft"
-              }`}
-            >
-              <t.icon size={21} strokeWidth={active ? 2.4 : 2} />
-              {t.label}
-            </Link>
-          );
-        })}
+    <DemoShellContext.Provider value={shell}>
+      <div className="canvas-base relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden pt-[env(safe-area-inset-top)] ring-1 ring-separator">
+        <a
+          href="#main"
+          className="text-footnote sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-app-surface focus:px-3 focus:py-2"
+        >
+          Skip to content
+        </a>
+
+        {/* Sunshine sits on the frame so content scrolls beneath it. */}
+        <div
+          aria-hidden
+          className="sunshine pointer-events-none absolute inset-x-0 top-0 z-0 h-[46%]"
+        />
+
+        <SessionStrip />
+
+        <main
+          id="main"
+          ref={scrollRef}
+          className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[104px]"
+          style={{ scrollPaddingBottom: 104 }}
+        >
+          {/* Tab switches cross-dissolve in iOS; they don't slide. */}
+          <div key={pathname} className="animate-[fade-in_.18s_ease-out]">
+            {children}
+          </div>
+        </main>
+
+        <TabBar tabs={withBadge} />
       </div>
-    </nav>
+    </DemoShellContext.Provider>
   );
 }
 
 export default function DemoLayout({ children }: { children: ReactNode }) {
   return (
     <AfkProvider>
-      <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-canvas shadow-[0_0_0_1px_var(--color-line)]">
-        <StatusBar />
-        <main className="flex-1 px-5 pt-5 pb-28">{children}</main>
-        <BottomNav />
-      </div>
+      <Shell>{children}</Shell>
     </AfkProvider>
   );
 }

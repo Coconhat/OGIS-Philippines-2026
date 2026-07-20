@@ -211,3 +211,43 @@ export const IconBattery = (p: IconProps) => (
     <path d="M5.5 11v2M9 11v2M12.5 11v2" />
   </svg>
 );
+
+export const IconClock = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3.5 2" />
+  </svg>
+);
+
+export const IconSliders = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 8h10M18 8h2M4 16h4M12 16h8" />
+    <circle cx="16" cy="8" r="2" />
+    <circle cx="10" cy="16" r="2" />
+  </svg>
+);
+
+export const IconChevronRight = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+export const IconPause = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 5v14M15 5v14" />
+  </svg>
+);
+
+export const IconPlay = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 4.5l12 7.5-12 7.5z" />
+  </svg>
+);
+
+export const IconAlertTriangle = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 4.5L21 19H3l9-14.5z" />
+    <path d="M12 10v4M12 17.2v.1" />
+  </svg>
+);

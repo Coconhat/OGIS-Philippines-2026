@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAfk } from "@/lib/afk-context";
+import { useDemoShell } from "@/lib/demo-shell";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import {
-  triageScript,
-  verdictMeta,
-  type TriageEvent,
+  asLevelId,
+  levelChrome,
+  resolveScript,
+  verdictTheme,
+  type ResolvedEvent,
 } from "@/lib/data";
+import { Doorkeeper, type DoorkeeperState } from "@/components/afk/doorkeeper";
+import { SpeechBubble } from "@/components/afk/speech-bubble";
+import { TriageDetailSheet } from "@/components/demo/triage-detail-sheet";
+import { NavBar } from "@/components/ui/nav-bar";
+import { Button } from "@/components/ui/button";
+import { Tile } from "@/components/ui/tile";
+import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { VerdictBadge } from "@/components/ui/verdict-badge";
+import { BubblesIllo, MoonIllo } from "@/components/illustrations";
 import {
-  IconAlarm,
+  IconChevronRight,
+  IconLock,
   IconMail,
   IconMessage,
   IconMoon,
+  IconPause,
   IconPhone,
-  IconShield,
+  IconPlay,
   IconSparkle,
   IconUndo,
 } from "@/components/icons";
@@ -26,49 +42,34 @@ const channelIcon = {
   Call: IconPhone,
 };
 
-function VerdictChips({ ev }: { ev: TriageEvent }) {
-  const urgencyColor =
-    ev.urgency === "high"
-      ? "text-coral"
-      : ev.urgency === "medium"
-        ? "text-accent-deep"
-        : "text-ink-soft";
-  return (
-    <div className="flex flex-wrap gap-1.5 text-[11px] font-bold">
-      <span className="rounded-full bg-canvas px-2.5 py-1 text-ink-soft">
-        intent: {ev.intent}
-      </span>
-      <span className={`rounded-full bg-canvas px-2.5 py-1 ${urgencyColor}`}>
-        urgency: {ev.urgency}
-      </span>
-      <span className="rounded-full bg-canvas px-2.5 py-1 text-ink-soft">
-        trust: {ev.trust}
-      </span>
-    </div>
-  );
-}
+type Stage = "arrived" | "thinking" | "verdict";
 
+/* Cards land neutral and wash into their verdict colour as the
+   decision resolves. Colour arriving at the moment of judgement is
+   the whole show — it's what makes six events read at a glance. */
 function EventCard({
   ev,
+  instant,
   onVerdict,
+  onOpen,
 }: {
-  ev: TriageEvent;
-  onVerdict: (ev: TriageEvent) => void;
+  ev: ResolvedEvent;
+  instant: boolean;
+  onVerdict: (ev: ResolvedEvent) => void;
+  onOpen: (ev: ResolvedEvent) => void;
 }) {
-  const [stage, setStage] = useState<"arrived" | "thinking" | "verdict">(
-    "arrived",
-  );
-  const [showReply, setShowReply] = useState(false);
+  const [stage, setStage] = useState<Stage>(instant ? "verdict" : "arrived");
   const notified = useRef(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setStage("thinking"), 500);
-    const t2 = setTimeout(() => setStage("verdict"), 1900);
+    if (instant) return;
+    const a = setTimeout(() => setStage("thinking"), 450);
+    const b = setTimeout(() => setStage("verdict"), 1800);
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(a);
+      clearTimeout(b);
     };
-  }, []);
+  }, [instant]);
 
   useEffect(() => {
     if (stage === "verdict" && !notified.current) {
@@ -77,216 +78,274 @@ function EventCard({
     }
   }, [stage, ev, onVerdict]);
 
-  const meta = verdictMeta[ev.verdict];
+  const settled = stage === "verdict";
+  const theme = verdictTheme[ev.verdict];
   const Channel = channelIcon[ev.channel];
-  const escalated = ev.verdict === "escalate" && stage === "verdict";
+  const escalated = settled && ev.verdict === "escalate";
 
   return (
-    <article
-      className={`animate-rise rounded-card border bg-surface p-4 shadow-card transition-all duration-300 ${
-        escalated ? "border-coral ring-2 ring-coral/25" : "border-line"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-black ${
-            ev.trust === "trusted"
-              ? "bg-accent-soft text-accent-deep"
-              : "bg-canvas text-ink-soft"
-          }`}
-        >
-          {ev.avatar}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-sm font-extrabold">
-            <Channel size={13} className="shrink-0 text-ink-faint" />
-            <span className="truncate">{ev.sender}</span>
-          </p>
-          <p className="text-[11px] font-semibold text-ink-faint">
-            {ev.senderRole} · {ev.channel}
-          </p>
-        </div>
-        {stage === "verdict" && (
+    <li className="animate-rise">
+      <Tile
+        tone={settled ? theme.tone : "plain"}
+        padding="sm"
+        onPress={() => settled && onOpen(ev)}
+        className={`transition-colors duration-500 ease-ios ${
+          escalated ? "ring-2 ring-coral" : ""
+        }`}
+        aria-label={`${ev.sender} via ${ev.channel}. ${
+          settled ? theme.label : "Being read"
+        }`}
+      >
+        <div className="flex items-center gap-3">
           <span
-            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold"
-            style={{ color: meta.color, background: meta.bg }}
+            className={`grid size-10 shrink-0 place-items-center rounded-pill text-footnote font-bold ${
+              escalated ? "bg-black/12 text-label" : "bg-fill-2 text-label-2"
+            }`}
+            aria-hidden
           >
-            {meta.label}
+            {ev.avatar}
           </span>
-        )}
-      </div>
 
-      <p className="mt-2.5 rounded-bubble bg-canvas px-3.5 py-2.5 text-[13px] font-semibold text-ink">
-        {ev.preview}
-      </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-subhead flex items-center gap-1.5 font-semibold">
+              <Channel
+                size={12}
+                className={escalated ? "text-label/55" : "text-label-3"}
+              />
+              <span className="truncate">{ev.sender}</span>
+            </p>
 
-      {stage === "thinking" && (
-        <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-accent-deep">
-          <IconSparkle size={13} className="animate-pulse-dot" />
-          AFK AI reading — locally, on your device…
-        </p>
-      )}
-
-      {stage === "verdict" && (
-        <div className="mt-2.5 space-y-2">
-          <VerdictChips ev={ev} />
-          <p className="text-[11px] font-semibold text-ink-faint">
-            baseline: {ev.deviation}
-          </p>
-          <p
-            className="text-[13px] font-bold"
-            style={{ color: ev.verdict === "suppress" ? "var(--color-ink-soft)" : meta.color }}
-          >
-            {ev.aiAction}
-          </p>
-          {ev.aiReply && (
-            <div>
-              <button
-                onClick={() => setShowReply((s) => !s)}
-                className="cursor-pointer text-xs font-extrabold text-ink-soft underline decoration-line underline-offset-4 transition-colors hover:text-ink"
+            {stage === "thinking" ? (
+              <p className="text-caption mt-0.5 inline-flex items-center gap-1.5 text-accent-text">
+                <IconSparkle size={12} className="animate-pulse-dot" />
+                reading on-device&hellip;
+              </p>
+            ) : (
+              <p
+                className={`text-caption mt-0.5 truncate ${
+                  escalated ? "text-label/55" : "text-label-2"
+                }`}
               >
-                {showReply ? "Hide AI reply" : "See what AFK sent"}
-              </button>
-              {showReply && (
-                <p className="mt-2 rounded-bubble rounded-br-sm bg-sky-soft px-3.5 py-2.5 text-[13px] leading-relaxed font-semibold text-ink">
-                  {ev.aiReply}
-                </p>
-              )}
+                {ev.preview}
+              </p>
+            )}
+          </div>
+
+          {settled && (
+            <div className="flex shrink-0 items-center gap-1">
+              <VerdictBadge verdict={ev.verdict} />
+              <IconChevronRight
+                size={14}
+                className={escalated ? "text-label/55" : "text-label-3"}
+              />
             </div>
           )}
         </div>
-      )}
-    </article>
+      </Tile>
+    </li>
   );
 }
 
 export default function TriagePage() {
-  const { afkOn, setAfkOn, pushHandled } = useAfk();
+  const { scrollRef } = useDemoShell();
+  const { afkOn, setAfkOn, pushHandled, level, sessionLevel, breakthrough: allowed } =
+    useAfk();
+  const reduced = useReducedMotion();
+
   const [run, setRun] = useState(0);
   const [count, setCount] = useState(0);
-  const [breakthrough, setBreakthrough] = useState<TriageEvent | null>(null);
+  const [paused, setPaused] = useState(false);
+  const [breakthrough, setBreakthrough] = useState<ResolvedEvent | null>(null);
+  const [detail, setDetail] = useState<ResolvedEvent | null>(null);
+
+  /* Play the rung the session actually started at, so changing the dial
+     mid-run doesn't rewrite cards already on screen. Falls back to the
+     current level when the user lands here without a session. */
+  const playAt = asLevelId(sessionLevel ?? level);
+  const script = useMemo(() => resolveScript(playAt), [playAt]);
+  const chrome = levelChrome[playAt];
+
+  const total = script.length;
+  const done = count >= total;
+
+  // Reduced motion: no auto-advance, everything already resolved.
+  const shown = reduced && afkOn ? total : count;
 
   useEffect(() => {
-    if (!afkOn || count >= triageScript.length) return;
-    const t = setTimeout(
-      () => setCount((c) => c + 1),
-      count === 0 ? 700 : 4200,
-    );
+    if (!afkOn || reduced || paused || count >= total) return;
+    const t = setTimeout(() => setCount((c) => c + 1), count === 0 ? 600 : 3600);
     return () => clearTimeout(t);
-  }, [afkOn, count, run]);
+  }, [afkOn, reduced, paused, count, total, run]);
 
-  const handleVerdict = (ev: TriageEvent) => {
-    pushHandled(ev);
-    if (ev.verdict === "escalate") setBreakthrough(ev);
+  /* A rung change restarts the sequence rather than leaving a mix of
+     levels on screen. Adjusting state during render is the sanctioned
+     way to respond to a changed value — an effect would cascade. */
+  const [prevLevel, setPrevLevel] = useState(playAt);
+  if (playAt !== prevLevel) {
+    setPrevLevel(playAt);
+    setCount(0);
+    setBreakthrough(null);
+    setRun((r) => r + 1);
+  }
+
+  const handleVerdict = useCallback(
+    (ev: ResolvedEvent) => {
+      pushHandled(ev);
+      // Mom only rings if she's still on the always-list. Switch her off
+      // in the sheet and the run genuinely has zero interruptions.
+      if (ev.verdict === "escalate" && allowed["c-mom"]) setBreakthrough(ev);
+    },
+    [pushHandled, allowed],
+  );
+
+  const replay = () => {
+    setRun((r) => r + 1);
+    setCount(0);
+    setPaused(false);
   };
 
-  const active = triageScript.slice(0, count);
-  const done = count >= triageScript.length;
+  const active = script.slice(0, shown);
+  const doorkeeper: DoorkeeperState = !afkOn
+    ? "dozing"
+    : breakthrough
+      ? "alarmed"
+      : active.length && !done
+        ? "thinking"
+        : "watching";
 
   return (
-    <div className="space-y-3">
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight">Triage</h1>
-          <p className="text-sm font-semibold text-ink-soft">
-            {afkOn
-              ? "Live — AFK AI is on the door."
-              : "AFK is off. Nothing to triage."}
-          </p>
-        </div>
-        {afkOn && done && (
-          <button
-            onClick={() => {
-              setRun((r) => r + 1);
-              setCount(0);
-            }}
-            className="cursor-pointer rounded-full border border-line bg-surface px-4 py-2 text-xs font-extrabold text-ink transition-colors hover:border-ink-faint"
-          >
-            Replay
-          </button>
-        )}
-      </header>
-
-      {!afkOn && (
-        <div className="rounded-card border border-line bg-surface p-8 text-center shadow-card">
-          <div className="mx-auto mb-4 grid size-16 place-items-center rounded-full bg-accent-soft text-accent-deep">
-            <IconShield size={28} />
-          </div>
-          <p className="font-extrabold">The door is open</p>
-          <p className="mx-auto mt-1 max-w-[30ch] text-sm font-semibold text-ink-soft">
-            Go AFK and watch every incoming message get read, judged, and
-            handled — live.
-          </p>
-          <button
-            onClick={() => setAfkOn(true)}
-            className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-6 py-3 font-extrabold text-white shadow-pop transition-colors hover:bg-accent-deep"
-          >
-            <IconMoon size={17} />
-            Go AFK now
-          </button>
-        </div>
-      )}
-
-      {afkOn && (
-        <div key={run} className="space-y-3">
-          {active.length === 0 && (
-            <p className="py-8 text-center text-sm font-bold text-ink-faint">
-              Listening for incoming events…
-            </p>
-          )}
-          {[...active].reverse().map((ev) => (
-            <EventCard key={ev.id} ev={ev} onVerdict={handleVerdict} />
-          ))}
-          {done && (
-            <p className="pt-2 text-center text-xs font-bold text-ink-faint">
-              6 events · 5 handled quietly · 1 reached you
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Breakthrough overlay */}
-      {breakthrough && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/60 backdrop-blur-sm"
-          role="alertdialog"
-          aria-label="Emergency breakthrough"
-        >
-          <div className="animate-rise mx-auto mb-24 w-[calc(100%-40px)] max-w-[390px] rounded-card bg-coral p-6 text-center text-white shadow-pop">
-            <IconAlarm size={30} className="mx-auto mb-2 animate-pulse-dot" />
-            <p className="text-xs font-extrabold tracking-widest uppercase text-white/80">
-              Breakthrough — this one is real
-            </p>
-            <p className="mt-2 text-xl font-black">
-              {breakthrough.sender}: “{breakthrough.preview}”
-            </p>
-            <p className="mt-1 text-sm font-bold text-white/85">
-              Far outside this sender's baseline. AFK bypassed Do Not Disturb.
-            </p>
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => setBreakthrough(null)}
-                className="cursor-pointer rounded-full bg-white py-3 font-extrabold text-coral transition-transform duration-150 active:scale-95"
+    <>
+      <NavBar
+        title="Triage"
+        subtitle={afkOn ? "The Doorkeeper is on the door." : "AFK is off."}
+        scrollRef={scrollRef}
+        trailing={
+          afkOn && !reduced ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="plain"
+                size="small"
+                tint="ink"
+                onPress={() => setPaused((p) => !p)}
+                aria-label={paused ? "Resume triage" : "Pause triage"}
+                icon={
+                  paused ? <IconPlay size={14} /> : <IconPause size={14} />
+                }
               >
-                Call now
-              </button>
-              <button
-                onClick={() => setBreakthrough(null)}
-                className="cursor-pointer rounded-full bg-white/20 py-3 font-extrabold text-white transition-colors hover:bg-white/30"
+                {paused ? "Play" : "Pause"}
+              </Button>
+              <Button
+                variant="plain"
+                size="small"
+                onPress={replay}
+                icon={<IconUndo size={14} />}
+                aria-label="Replay the triage sequence"
               >
-                Dismiss
-              </button>
+                Replay
+              </Button>
             </div>
-          </div>
-        </div>
-      )}
+          ) : null
+        }
+      />
 
-      {afkOn && (
-        <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-[11px] font-bold text-ink-faint">
-          <IconUndo size={12} />
-          Every action is reviewable and undoable in your Return Briefing
-        </p>
-      )}
-    </div>
+      <div className="px-4 pb-6">
+        {!afkOn ? (
+          <EmptyState
+            illustration={<MoonIllo />}
+            title="The door is open"
+            message="Go AFK and watch every incoming message get read, judged and handled — live."
+            action={
+              <Button
+                icon={<IconMoon size={17} />}
+                onPress={() => setAfkOn(true)}
+              >
+                Go AFK now
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <div className="flex flex-col items-center gap-2 pb-2">
+              <SpeechBubble key={`voice-${playAt}`} className="animate-rise">
+                {chrome.assistantLine}
+              </SpeechBubble>
+              <Doorkeeper state={doorkeeper} size={72} />
+            </div>
+
+            {active.length === 0 ? (
+              <EmptyState
+                illustration={<BubblesIllo />}
+                title="Listening"
+                message="Waiting for the first thing to come through…"
+              />
+            ) : (
+              <ul
+                key={run}
+                className="space-y-2.5"
+                aria-live="polite"
+                aria-relevant="additions"
+              >
+                {[...active].reverse().map((ev) => (
+                  <EventCard
+                    key={ev.id}
+                    ev={ev}
+                    instant={reduced}
+                    onVerdict={handleVerdict}
+                    onOpen={setDetail}
+                  />
+                ))}
+              </ul>
+            )}
+
+            {/* The ceiling beat: five cards have just gone green and you
+                expect a sixth — instead you get one that stopped. */}
+            {(done || reduced) && chrome.ceiling && (
+              <div className="animate-rise mt-2.5 rounded-tile border border-dashed border-separator px-4 py-3">
+                <p className="text-subhead flex items-center gap-2 font-semibold text-label-2">
+                  <IconLock size={14} className="shrink-0" />
+                  {chrome.ceiling.who}
+                </p>
+                <p className="text-caption mt-1 text-label-2">
+                  {chrome.ceiling.what}
+                </p>
+                <p className="text-caption mt-1.5 text-label-3">
+                  Held at the ceiling — no money, no legal, no new commitments.
+                </p>
+              </div>
+            )}
+
+            {(done || reduced) && active.length > 0 && (
+              <p className="text-footnote mt-4 text-center text-balance text-label-2">
+                {chrome.tally}
+              </p>
+            )}
+
+            <p className="text-caption mt-3 flex items-center justify-center gap-1.5 text-center text-label-3">
+              <IconUndo size={12} />
+              Every action is reviewable and undoable in your briefing
+            </p>
+          </>
+        )}
+      </div>
+
+      <TriageDetailSheet event={detail} onClose={() => setDetail(null)} />
+
+      <Alert
+        open={breakthrough !== null}
+        variant="critical"
+        media={<Doorkeeper state="alarmed" size={84} />}
+        title={`${breakthrough?.sender ?? ""}: “${breakthrough?.preview ?? ""}”`}
+        message="Far outside this sender's baseline. AFK bypassed Do Not Disturb."
+        onDismiss={() => setBreakthrough(null)}
+        actions={[
+          { label: "Call now", onPress: () => setBreakthrough(null) },
+          {
+            label: "Dismiss",
+            style: "cancel",
+            onPress: () => setBreakthrough(null),
+          },
+        ]}
+      />
+    </>
   );
 }

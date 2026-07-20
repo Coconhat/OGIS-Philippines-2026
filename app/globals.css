@@ -69,6 +69,164 @@
   }
 }
 
+/* ============================================================
+   Design system — iOS bones, expressive skin.
+   Tailwind v4 merges multiple @theme blocks, so this extends
+   the palette above rather than replacing it.
+   See docs/design-tokens.md for the rules that govern usage.
+   ============================================================ */
+
+@theme {
+  /* ---- Type ramp ----
+     iOS sizes at Dynamic Type Large. Weights run one notch heavier
+     than SF because Nunito's smaller x-height reads lighter. */
+  --text-display: 40px;
+  --text-display--line-height: 44px;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 900;
+
+  --text-large-title: 34px;
+  --text-large-title--line-height: 41px;
+  --text-large-title--letter-spacing: -0.022em;
+  --text-large-title--font-weight: 800;
+
+  --text-title-1: 28px;
+  --text-title-1--line-height: 34px;
+  --text-title-1--letter-spacing: -0.021em;
+  --text-title-1--font-weight: 800;
+
+  --text-title-2: 22px;
+  --text-title-2--line-height: 28px;
+  --text-title-2--letter-spacing: -0.017em;
+  --text-title-2--font-weight: 800;
+
+  --text-title-3: 20px;
+  --text-title-3--line-height: 25px;
+  --text-title-3--letter-spacing: -0.012em;
+  --text-title-3--font-weight: 700;
+
+  --text-headline: 17px;
+  --text-headline--line-height: 22px;
+  --text-headline--letter-spacing: -0.006em;
+  --text-headline--font-weight: 700;
+
+  --text-body: 17px;
+  --text-body--line-height: 22px;
+  --text-body--letter-spacing: -0.006em;
+  --text-body--font-weight: 500;
+
+  --text-callout: 16px;
+  --text-callout--line-height: 21px;
+  --text-callout--letter-spacing: -0.004em;
+  --text-callout--font-weight: 500;
+
+  --text-subhead: 15px;
+  --text-subhead--line-height: 20px;
+  --text-subhead--font-weight: 500;
+
+  --text-footnote: 13px;
+  --text-footnote--line-height: 18px;
+  --text-footnote--letter-spacing: 0.002em;
+  --text-footnote--font-weight: 500;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0.005em;
+  --text-caption--font-weight: 600;
+
+  /* Caveat runs small for its point size, so the AI's voice gets its
+     own step rather than borrowing one from the ramp. */
+  --text-hand: 15px;
+  --text-hand--line-height: 18px;
+  --text-hand--font-weight: 600;
+
+  /* ---- Semantic weights (Nunito 400 is too light next to SF) ---- */
+  --font-weight-regular: 500;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  --font-weight-heavy: 900;
+
+  /* ============================================================
+     APP PALETTE — the demo app only.
+     Light, but deliberately NOT warm paper: the canvas carries a
+     cool cast so it never reads as cream, and the colour lives in
+     saturated verdict cards rather than in the background. Orange
+     stays the lead, same as the landing page.
+     The *-soft tokens above belong to the landing page — untouched.
+     ============================================================ */
+
+  /* Apple's real system values — systemGroupedBackground and
+     secondarySystemGroupedBackground. Neutral-cool, never cream. */
+  --color-app-bg: #f2f2f7;
+  --color-app-surface: #ffffff;
+  --color-app-surface-2: #e5e5ea; /* systemGray5 — recessed wells */
+
+  /* ---- Labels — iOS label / secondaryLabel / tertiaryLabel ---- */
+  --color-label: rgb(0 0 0 / 1);
+  --color-label-2: rgb(60 60 67 / 0.6);
+  --color-label-3: rgb(60 60 67 / 0.3);
+  /* White text, for dark fills only (the ink button). Bright fills
+     like coral and the orange gradient take ink text instead — it
+     contrasts better, and it's what the reference decks do. */
+  --color-label-inv: rgb(255 255 255 / 0.98);
+  --color-label-inv-2: rgb(255 255 255 / 0.75);
+
+  /* ---- Accessible text variants ----
+     accent/coral/mint/sky are FILL colours — all fail as small text
+     on white. Anything under 17px/700 uses these. */
+  --color-accent-text: #a85400;
+  --color-coral-text: #b8362c;
+  --color-mint-text: #1c7a49;
+  --color-sky-text: #0062ad;
+
+  /* ---- Tints for icon chips and tinted buttons ---- */
+  --color-accent-dim: rgb(255 140 23 / 0.15);
+  --color-coral-dim: rgb(255 97 84 / 0.14);
+  --color-mint-dim: rgb(47 158 99 / 0.14);
+  --color-sky-dim: rgb(0 120 212 / 0.12);
+
+  /* ---- Verdict card surfaces — the signature colour-blocking.
+     Saturated enough to read as colour blocks at a glance, light
+     enough to carry ink text at 4.5:1. ---- */
+  --color-card-mute: #e8eaf0; /* suppressed · cool gray */
+  --color-card-reply: #cfe2ff; /* replied    · blue */
+  --color-card-act: #c4eed3; /* acted      · green */
+  --color-card-alert: #ff6154; /* escalated  · coral, ink text */
+
+  /* ---- Structure — iOS separator and system fills ---- */
+  --color-separator: rgb(60 60 67 / 0.2);
+  --color-fill-1: rgb(120 120 128 / 0.12);
+  --color-fill-2: rgb(120 120 128 / 0.08);
+  --color-fill-3: rgb(120 120 128 / 0.07);
+
+  /* ---- Radii — softer than iOS system, per the reference decks ---- */
+  --radius-tile: 24px;
+  --radius-group: 16px;
+  --radius-control: 12px;
+  --radius-sheet: 28px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation — three tiers, enforced.
+     Most of the app is flat; color separates, not shadow. ---- */
+  --shadow-flat: none;
+  --shadow-raised:
+    0 1px 2px rgb(23 23 23 / 0.04), 0 6px 16px rgb(23 23 23 / 0.06);
+  --shadow-float:
+    0 2px 6px rgb(23 23 23 / 0.07), 0 16px 40px rgb(23 23 23 / 0.12);
+  --shadow-sheet: 0 -20px 60px rgb(23 23 23 / 0.22);
+
+  /* ---- Motion ---- */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: linear(0, 0.4 12%, 0.9 26%, 1.06 41%, 0.99 62%, 1);
+  --duration-sheet: 460ms;
+  --duration-control: 260ms;
+
+  --blur-thin: 20px;
+  --blur-regular: 30px;
+  --blur-thick: 40px;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -86,17 +244,21 @@ body {
   color: #fff;
 }
 
-/* ---- Keeby-style utilities ---- */
+/* ---- Keeby-style utilities ----
+   Declared with @utility so they compose with variants
+   (hover:, md:, …) and sort correctly against Tailwind's own. */
 
-/* Handwritten annotations, like Keeby's "try typing!" notes */
-.hand {
+/* Handwritten annotations, like Keeby's "try typing!" notes.
+   In the demo app this has exactly one job: the AI's voice. */
+@utility hand {
   font-family: var(--font-hand);
   font-weight: 600;
   color: var(--color-ink-soft);
 }
 
-/* Warm orange wallpaper, like Keeby's macOS hero background */
-.wallpaper {
+/* Warm orange wallpaper, like Keeby's macOS hero background.
+   Budgeted: the Doorkeeper's body and the Missions banner only. */
+@utility wallpaper {
   background:
     radial-gradient(120% 90% at 15% 0%, #ffd9a8 0%, transparent 50%),
     radial-gradient(130% 100% at 90% 15%, #ffb45c 0%, transparent 55%),
@@ -104,7 +266,7 @@ body {
 }
 
 /* Frosted glass panel over the wallpaper (macOS menu style) */
-.glass {
+@utility glass {
   background: rgb(255 255 255 / 0.55);
   backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -112,7 +274,7 @@ body {
   box-shadow: 0 8px 32px rgb(120 60 0 / 0.18);
 }
 
-.glass-faint {
+@utility glass-faint {
   background: rgb(255 255 255 / 0.3);
   backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
@@ -120,20 +282,125 @@ body {
 }
 
 /* Horizontal snap carousel with hidden scrollbar */
-.carousel {
+@utility carousel {
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  & > * {
+    scroll-snap-align: center;
+    flex-shrink: 0;
+  }
 }
-.carousel::-webkit-scrollbar {
-  display: none;
+
+/* ---- App chrome ---- */
+
+/* Nav bar / tab bar material, matching UIBlurEffect systemThinMaterial */
+@utility material-bar {
+  background: rgb(249 249 251 / 0.76);
+  backdrop-filter: blur(var(--blur-regular)) saturate(1.8);
+  -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(1.8);
 }
-.carousel > * {
-  scroll-snap-align: center;
-  flex-shrink: 0;
+
+/* Sub-pixel separators — box-shadow renders a true hairline where
+   a 1px border would round up on 2x/3x displays. */
+@utility hairline-b {
+  box-shadow: 0 0.5px 0 0 var(--color-separator);
 }
+@utility hairline-t {
+  box-shadow: 0 -0.5px 0 0 var(--color-separator);
+}
+
+/* Apple's continuous corners, where the browser can do them. */
+@supports (corner-shape: squircle) {
+  .rounded-tile,
+  .rounded-group,
+  .rounded-sheet,
+  .rounded-card {
+    corner-shape: squircle;
+  }
+}
+
+/* Inset hairlines between list rows. Done at the container so the
+   rule keys off "not the first row", which a `first:` variant on the
+   row itself can't express once the row is wrapped in a button/link.
+   scaleY(0.5) renders a true sub-pixel line on 2x displays. */
+@utility list-rows {
+  & > * + * > .row-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--sep-inset, 16px);
+    height: 1px;
+    background: var(--color-separator);
+    transform: scaleY(0.5);
+    transform-origin: top;
+  }
+}
+
+/* ---- Canvas ----
+   Flat systemGroupedBackground, exactly as iOS does it. The colour
+   lives in the cards, not the backdrop — that's what keeps this from
+   drifting back into a tinted-paper look. */
+@utility canvas-base {
+  background-color: var(--color-app-bg);
+}
+
+/* A quiet dot field behind the Doorkeeper. The radial mask dissolves it
+   toward the edges so it reads as texture under the character rather
+   than a panel with a border. Neutral grey on purpose — the colour on
+   this card belongs to the character. */
+@utility dot-field {
+  background-image: radial-gradient(
+    circle,
+    rgb(60 60 67 / 0.16) 1px,
+    transparent 1px
+  );
+  background-size: 15px 15px;
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 48%,
+    #000 26%,
+    transparent 70%
+  );
+  mask-image: radial-gradient(circle at 50% 48%, #000 26%, transparent 70%);
+}
+
+/* Sunshine — warm light falling in from the top of the screen.
+   Sits on the frame, not on the scroll container, so content passes
+   underneath it rather than dragging it along. This is where the
+   landing page's orange gets into the app without tinting the
+   background itself. */
+@utility sunshine {
+  background-image:
+    radial-gradient(
+      116% 100% at 50% 0%,
+      rgb(255 164 51 / 0.42) 0%,
+      rgb(255 186 92 / 0.2) 34%,
+      rgb(255 200 120 / 0.06) 62%,
+      transparent 85%
+    ),
+    radial-gradient(
+      70% 62% at 78% 4%,
+      rgb(255 214 140 / 0.34) 0%,
+      transparent 70%
+    );
+}
+
+/* Focus ring — none existed anywhere before. */
+:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* (sr-only comes from Tailwind core — used for chart data tables
+   and triage event announcements.) */
 
 /* Looping micro-animations for SVG illustrations */
 .anim-bob {
@@ -234,6 +501,178 @@ body {
   100% {
     opacity: 0;
     transform: scale(0.8);
+  }
+}
+
+/* ---- Presentation ---- */
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes alert-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---- The Doorkeeper ----
+   Face motion for the mascot. Every animation resolves to the
+   correct resting expression on its final keyframe, so the
+   reduced-motion guard below freezes each state legibly. */
+
+.dk-blink {
+  animation: dk-blink 4.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dk-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.08);
+  }
+  98% {
+    transform: scaleY(1);
+  }
+}
+
+/* Eyes drift as if watching the door */
+.dk-scan {
+  animation: dk-scan 6.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dk-scan {
+  0%,
+  100% {
+    transform: translateX(-2.2px);
+  }
+  50% {
+    transform: translateX(2.2px);
+  }
+}
+
+.dk-float {
+  animation: dk-float 4.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dk-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Alarm: bursts of shake with a rest between, not a constant jitter */
+.dk-shake {
+  animation: dk-shake 2.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dk-shake {
+  0%,
+  62%,
+  100% {
+    transform: translateX(0);
+  }
+  66%,
+  74%,
+  82% {
+    transform: translateX(-3.5px);
+  }
+  70%,
+  78%,
+  86% {
+    transform: translateX(3.5px);
+  }
+}
+
+.dk-zzz {
+  animation: dk-zzz 3.6s ease-out infinite;
+  transform-box: fill-box;
+}
+@keyframes dk-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.7);
+  }
+  30% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(7px, -17px) scale(1.1);
+  }
+}
+
+.dk-orbit {
+  animation: dk-orbit 3.4s linear infinite;
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+}
+@keyframes dk-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dk-drift {
+  animation: dk-drift 5.5s ease-in-out infinite;
+}
+@keyframes dk-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.dk-ring {
+  animation: dk-ring 1.6s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes dk-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
   }
 }
 

@@ -1,111 +1,216 @@
 "use client";
 
+import { useState } from "react";
+import { useDemoShell } from "@/lib/demo-shell";
 import { lensApps, lensDay, lensDayLabels } from "@/lib/data";
-import { IconEye, IconLock, IconSparkle } from "@/components/icons";
+import { NavBar } from "@/components/ui/nav-bar";
+import { Button } from "@/components/ui/button";
+import { Tile } from "@/components/ui/tile";
+import { List, Row, RowIcon } from "@/components/ui/list";
+import { Progress } from "@/components/ui/progress";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DialIllo } from "@/components/illustrations";
+import {
+  IconAlertTriangle,
+  IconFlame,
+  IconLock,
+  IconSparkle,
+  IconTarget,
+} from "@/components/icons";
 
 const maxHours = Math.max(...lensApps.map((a) => a.hours));
 const maxOpens = Math.max(...lensDay);
 
 export default function LensPage() {
+  const { scrollRef } = useDemoShell();
+  const [range, setRange] = useState<"week" | "day">("week");
+  const [picked, setPicked] = useState<number | null>(null);
+
   return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-black tracking-tight">Screen Time Lens</h1>
-        <p className="text-sm font-semibold text-ink-soft">
-          Your week, read back to you.
-        </p>
-      </header>
+    <>
+      <NavBar
+        title="Screen Time"
+        subtitle="Your week, read back to you."
+        scrollRef={scrollRef}
+        pinned={
+          <SegmentedControl
+            label="Time range"
+            value={range}
+            onChange={setRange}
+            options={[
+              { value: "week", label: "Week" },
+              { value: "day", label: "Day" },
+            ]}
+          />
+        }
+      />
 
-      {/* Weekly narrative */}
-      <section className="rounded-card border border-line bg-surface p-6 shadow-card">
-        <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-extrabold tracking-widest uppercase text-accent-deep">
-          <IconSparkle size={13} />
-          This week's story
-        </p>
-        <p className="mt-4 text-[17px] leading-relaxed font-extrabold text-ink">
-          Short-video apps took{" "}
-          <span className="text-accent-deep">9.5 hours</span> this week, mostly
-          between 11pm and 1am. That's your most compulsive app —{" "}
-          <span className="text-coral">70% of opens</span> had no notification
-          behind them.
-        </p>
-        <p className="mt-3 text-sm font-semibold text-ink-soft">
-          Your phone didn't call you. You went anyway. That's the habit AFK
-          Missions are built from.
-        </p>
-      </section>
+      {range === "day" ? (
+        <EmptyState
+          illustration={<DialIllo />}
+          title="Day view lands in the full build"
+          message="The concept demo ships the weekly story — that's where the habit actually shows up."
+          action={
+            <Button variant="tinted" onPress={() => setRange("week")}>
+              Back to the week
+            </Button>
+          }
+        />
+      ) : (
+        <div className="space-y-5 px-4 pb-6">
+          {/* The one raised element on this screen. */}
+          <Tile raised padding="lg">
+            <p className="text-caption inline-flex w-fit items-center gap-1.5 rounded-pill bg-accent-dim px-3 py-1.5 font-bold tracking-widest text-accent-text uppercase">
+              <IconSparkle size={12} />
+              This week&apos;s story
+            </p>
+            <p className="text-title-2 mt-4 text-balance">
+              Short-video apps took{" "}
+              <span className="text-accent-text">9.5 hours</span> this week,
+              mostly between 11pm and 1am. That&apos;s your most compulsive app
+              — <span className="text-coral-text">70% of opens</span> had no
+              notification behind them.
+            </p>
+            <p className="text-subhead mt-3 text-label-2">
+              Your phone didn&apos;t call you. You went anyway. That&apos;s the
+              habit AFK Missions are built from.
+            </p>
+          </Tile>
 
-      {/* App breakdown */}
-      <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-        <h2 className="font-extrabold">Where the hours went</h2>
-        <div className="mt-4 space-y-3.5">
-          {lensApps.map((app) => (
-            <div key={app.name}>
-              <div className="mb-1 flex items-baseline justify-between text-[13px] font-bold">
-                <span>{app.name}</span>
-                <span className="text-ink-soft">
-                  {app.hours}h
-                  <span
-                    className={`ml-2 text-[11px] font-extrabold ${
-                      app.compulsive >= 50 ? "text-coral" : "text-ink-faint"
-                    }`}
-                  >
-                    {app.compulsive}% compulsive
-                  </span>
-                </span>
-              </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-canvas">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${(app.hours / maxHours) * 100}%`,
-                    background: app.color,
-                  }}
+          <List
+            header="Where the hours went"
+            footer="“Compulsive” = short, frequent opens with no notification trigger."
+          >
+            {lensApps.map((app) => {
+              const compulsive = app.compulsive >= 50;
+              return (
+                <Row
+                  key={app.name}
+                  size="tall"
+                  leading={
+                    <span
+                      aria-hidden
+                      className="size-[29px] shrink-0 rounded-[8px]"
+                      style={{ background: app.color }}
+                    />
+                  }
+                  title={app.name}
+                  subtitle={
+                    <div className="mt-1 space-y-1.5">
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          compulsive ? "text-coral-text" : "text-label-2"
+                        }`}
+                      >
+                        {compulsive && <IconAlertTriangle size={12} />}
+                        {app.compulsive}% compulsive
+                      </span>
+                      <Progress
+                        value={app.hours / maxHours}
+                        tint={compulsive ? "coral" : "accent"}
+                        label={`${app.name}: ${app.hours} hours`}
+                      />
+                    </div>
+                  }
+                  value={
+                    <span className="tabular-nums">{app.hours}h</span>
+                  }
                 />
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-[11px] font-semibold text-ink-faint">
-          “Compulsive” = short, frequent opens with no notification trigger.
-        </p>
-      </section>
+              );
+            })}
+          </List>
 
-      {/* Day heat strip */}
-      <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-        <h2 className="font-extrabold">When you reach for it</h2>
-        <p className="mt-0.5 text-xs font-semibold text-ink-soft">
-          Pickups per two-hour block, this week's average
-        </p>
-        <div className="mt-4 flex items-end justify-between gap-1.5">
-          {lensDay.map((v, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+          <section>
+            <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
+              When you reach for it
+            </h2>
+            <div className="rounded-group bg-app-surface p-4">
               <div
-                className={`w-full rounded-t-md transition-all duration-700 ${
-                  v === maxOpens ? "bg-coral" : v > 12 ? "bg-accent" : "bg-line"
-                }`}
-                style={{ height: `${(v / maxOpens) * 72 + 6}px` }}
-                title={`${v} pickups`}
-              />
-              <span className="text-[9px] font-bold text-ink-faint">
-                {lensDayLabels[i]}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 rounded-bubble bg-coral-soft px-3.5 py-2.5 text-[13px] font-bold text-coral">
-          Your midnight cluster is your biggest leak — 23 pickups after 10pm.
-        </p>
-      </section>
+                role="img"
+                aria-label="Pickups per two-hour block. Peaks at 23 pickups after 10pm, the highest of the day."
+                className="flex items-end justify-between gap-1.5"
+              >
+                {lensDay.map((v, i) => (
+                  <button
+                    key={lensDayLabels[i]}
+                    type="button"
+                    onClick={() => setPicked(picked === i ? null : i)}
+                    aria-label={`${lensDayLabels[i]}: ${v} pickups`}
+                    className="flex flex-1 cursor-pointer flex-col items-center gap-1.5"
+                  >
+                    <span
+                      className={`text-caption font-bold transition-opacity duration-200 ${
+                        picked === i
+                          ? "text-label opacity-100"
+                          : "opacity-0"
+                      }`}
+                    >
+                      {v}
+                    </span>
+                    <span
+                      className={`w-full rounded-t-[3px] transition-all duration-700 ease-ios ${
+                        v === maxOpens
+                          ? "bg-coral"
+                          : v > 12
+                            ? "bg-accent"
+                            : "bg-fill-1"
+                      }`}
+                      style={{ height: `${(v / maxOpens) * 74 + 6}px` }}
+                    />
+                    <span className="text-caption text-label-3">
+                      {lensDayLabels[i]}
+                    </span>
+                  </button>
+                ))}
+              </div>
 
-      <p className="flex items-center justify-center gap-1.5 pt-1 text-center text-[11px] font-bold text-ink-faint">
-        <IconLock size={12} />
-        All analysis happens on this device. Behavioral data never leaves it.
-      </p>
-      <p className="flex items-center justify-center gap-1.5 text-center text-[11px] font-bold text-ink-faint">
-        <IconEye size={12} />
-        AFK watches your usage so nobody else has to.
-      </p>
-    </div>
+              {/* The accessible equivalent of the chart. */}
+              <table className="sr-only">
+                <caption>Pickups per two-hour block</caption>
+                <tbody>
+                  {lensDay.map((v, i) => (
+                    <tr key={lensDayLabels[i]}>
+                      <th scope="row">{lensDayLabels[i]}</th>
+                      <td>{v} pickups</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Closes the loop the copy already promises. */}
+          <List tint="coral">
+            <Row
+              size="tall"
+              leading={
+                <RowIcon tint="coral">
+                  <IconFlame size={16} />
+                </RowIcon>
+              }
+              title="Your midnight cluster is the biggest leak"
+              subtitle="23 pickups after 10pm — more than any other block."
+            />
+            <Row
+              leading={
+                <RowIcon tint="accent">
+                  <IconTarget size={16} />
+                </RowIcon>
+              }
+              title="Create a mission from this"
+              accessory="chevron"
+              href="/demo/missions"
+            />
+          </List>
+
+          <p className="text-footnote flex items-center justify-center gap-1.5 px-4 text-center text-label-3">
+            <IconLock size={12} className="shrink-0" />
+            All analysis happens on this device. Behavioural data never leaves
+            it.
+          </p>
+        </div>
+      )}
+    </>
   );
 }
