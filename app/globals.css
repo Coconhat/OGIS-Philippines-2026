@@ -316,12 +316,26 @@ body {
   box-shadow: 0 -0.5px 0 0 var(--color-separator);
 }
 
+/* iOS home-screen icon mask.
+
+   Apple's ratio is 22.37% of the icon width, but that number assumes a
+   *continuous* corner. Chrome now supports `corner-shape: squircle`,
+   and a superellipse keeps its sides flat far closer to the corner than
+   an arc does — so at 22.37% it renders visibly squarer than an iOS
+   icon, which is exactly how it looked. A larger radius is needed to
+   land on the same silhouette. */
+@utility icon-squircle {
+  border-radius: 45%;
+  overflow: hidden;
+}
+
 /* Apple's continuous corners, where the browser can do them. */
 @supports (corner-shape: squircle) {
   .rounded-tile,
   .rounded-group,
   .rounded-sheet,
-  .rounded-card {
+  .rounded-card,
+  .icon-squircle {
     corner-shape: squircle;
   }
 }
@@ -532,6 +546,32 @@ body {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* Nudge banners drop in from under the notch. The demo frame is
+   `overflow-hidden`, so the off-screen position is clipped for free —
+   no portal, no fixed positioning. */
+
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-115%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes banner-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-115%);
   }
 }
 

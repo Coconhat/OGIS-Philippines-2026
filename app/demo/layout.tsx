@@ -3,8 +3,11 @@
 import { usePathname } from "next/navigation";
 import { useMemo, useRef, type ReactNode } from "react";
 import { AfkProvider, useAfk } from "@/lib/afk-context";
+import { NudgeProvider } from "@/lib/nudge-context";
 import { DemoShellContext } from "@/lib/demo-shell";
 import { briefingDecisions } from "@/lib/data";
+import { NudgeHost } from "@/components/demo/nudge-host";
+import { ScrollSim } from "@/components/demo/scroll-sim";
 import { TabBar, type Tab } from "@/components/ui/tab-bar";
 import {
   IconChart,
@@ -88,6 +91,12 @@ function Shell({ children }: { children: ReactNode }) {
         </main>
 
         <TabBar tabs={withBadge} />
+
+        {/* Both sit on the frame, above the tab bar. The banner needs no
+            portal — the frame is already relative + overflow-hidden, so
+            it slides in from under the notch and clips for free. */}
+        <NudgeHost />
+        <ScrollSim />
       </div>
     </DemoShellContext.Provider>
   );
@@ -96,7 +105,9 @@ function Shell({ children }: { children: ReactNode }) {
 export default function DemoLayout({ children }: { children: ReactNode }) {
   return (
     <AfkProvider>
-      <Shell>{children}</Shell>
+      <NudgeProvider>
+        <Shell>{children}</Shell>
+      </NudgeProvider>
     </AfkProvider>
   );
 }

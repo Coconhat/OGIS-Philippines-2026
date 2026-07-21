@@ -2,18 +2,27 @@
 
 import { useState } from "react";
 import { useDemoShell } from "@/lib/demo-shell";
-import { lensApps, lensDay, lensDayLabels } from "@/lib/data";
+import { useAfk } from "@/lib/afk-context";
+import {
+  behaviours,
+  lensApps,
+  lensDay,
+  lensDayLabels,
+  type Behaviour,
+} from "@/lib/data";
+import {
+  BehaviourSheet,
+  behaviourGlyphs,
+} from "@/components/demo/behaviour-sheet";
 import { NavBar } from "@/components/ui/nav-bar";
-import { Button } from "@/components/ui/button";
 import { Tile } from "@/components/ui/tile";
 import { List, Row, RowIcon } from "@/components/ui/list";
 import { Progress } from "@/components/ui/progress";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { EmptyState } from "@/components/ui/empty-state";
-import { DialIllo } from "@/components/illustrations";
+import { SessionTracker } from "@/components/demo/session-tracker";
 import {
   IconAlertTriangle,
-  IconFlame,
+  IconEye,
   IconLock,
   IconSparkle,
   IconTarget,
@@ -22,10 +31,18 @@ import {
 const maxHours = Math.max(...lensApps.map((a) => a.hours));
 const maxOpens = Math.max(...lensDay);
 
+// Worst first — the point of the list is triage, not an inventory.
+const severityRank = { high: 0, medium: 1, low: 2 };
+const ranked = [...behaviours].sort(
+  (a, b) => severityRank[a.severity] - severityRank[b.severity],
+);
+
 export default function LensPage() {
   const { scrollRef } = useDemoShell();
-  const [range, setRange] = useState<"week" | "day">("week");
+  const [range, setRange] = useState<"week" | "today">("week");
   const [picked, setPicked] = useState<number | null>(null);
+  const [openBehaviour, setOpenBehaviour] = useState<Behaviour | null>(null);
+  const { acceptedMissions, acceptMission } = useAfk();
 
   return (
     <>
@@ -40,23 +57,80 @@ export default function LensPage() {
             onChange={setRange}
             options={[
               { value: "week", label: "Week" },
-              { value: "day", label: "Day" },
+              { value: "today", label: "Today" },
             ]}
           />
         }
       />
 
-      {range === "day" ? (
-        <EmptyState
-          illustration={<DialIllo />}
-          title="Day view lands in the full build"
-          message="The concept demo ships the weekly story — that's where the habit actually shows up."
-          action={
-            <Button variant="tinted" onPress={() => setRange("week")}>
-              Back to the week
-            </Button>
-          }
-        />
+      {range === "today" ? (
+        <div className="space-y-5 px-4 pb-6">
+          <SessionTracker />
+
+          {/* A day-shaped chart, finally in the day view. */}
+          <section>
+            <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
+              When you reach for it
+            </h2>
+            <div className="rounded-group bg-app-surface p-4">
+              <div
+                role="img"
+                aria-label="Pickups per two-hour block. Peaks at 23 pickups after 10pm, the highest of the day."
+                className="flex items-end justify-between gap-1.5"
+              >
+                {lensDay.map((v, i) => (
+                  <button
+                    key={lensDayLabels[i]}
+                    type="button"
+                    onClick={() => setPicked(picked === i ? null : i)}
+                    aria-label={`${lensDayLabels[i]}: ${v} pickups`}
+                    className="flex flex-1 cursor-pointer flex-col items-center gap-1.5"
+                  >
+                    <span
+                      className={`text-caption font-bold transition-opacity duration-200 ${
+                        picked === i ? "text-label opacity-100" : "opacity-0"
+                      }`}
+                    >
+                      {v}
+                    </span>
+                    <span
+                      className={`w-full rounded-t-[3px] transition-all duration-700 ease-ios ${
+                        v === maxOpens
+                          ? "bg-coral"
+                          : v > 12
+                            ? "bg-accent"
+                            : "bg-fill-1"
+                      }`}
+                      style={{ height: `${(v / maxOpens) * 74 + 6}px` }}
+                    />
+                    <span className="text-caption text-label-3">
+                      {lensDayLabels[i]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* The accessible equivalent of the chart. */}
+              <table className="sr-only">
+                <caption>Pickups per two-hour block</caption>
+                <tbody>
+                  {lensDay.map((v, i) => (
+                    <tr key={lensDayLabels[i]}>
+                      <th scope="row">{lensDayLabels[i]}</th>
+                      <td>{v} pickups</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <p className="text-footnote flex items-center justify-center gap-1.5 px-4 text-center text-label-3">
+            <IconLock size={12} className="shrink-0" />
+            All analysis happens on this device. Behavioural data never leaves
+            it.
+          </p>
+        </div>
       ) : (
         <div className="space-y-5 px-4 pb-6">
           {/* The one raised element on this screen. */}
@@ -121,86 +195,66 @@ export default function LensPage() {
             })}
           </List>
 
-          <section>
-            <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
-              When you reach for it
-            </h2>
-            <div className="rounded-group bg-app-surface p-4">
-              <div
-                role="img"
-                aria-label="Pickups per two-hour block. Peaks at 23 pickups after 10pm, the highest of the day."
-                className="flex items-end justify-between gap-1.5"
-              >
-                {lensDay.map((v, i) => (
-                  <button
-                    key={lensDayLabels[i]}
-                    type="button"
-                    onClick={() => setPicked(picked === i ? null : i)}
-                    aria-label={`${lensDayLabels[i]}: ${v} pickups`}
-                    className="flex flex-1 cursor-pointer flex-col items-center gap-1.5"
-                  >
-                    <span
-                      className={`text-caption font-bold transition-opacity duration-200 ${
-                        picked === i
-                          ? "text-label opacity-100"
-                          : "opacity-0"
-                      }`}
-                    >
-                      {v}
+          {/* The habits themselves, not just the hours. This is what
+              missions get generated from — tapping one shows the
+              measurement and the mission it produced. */}
+          <List
+            header="What we're seeing"
+            footer="Ranked by how much they're costing you. Tap one to see the mission it generated."
+          >
+            {ranked.map((b) => {
+              const Glyph = behaviourGlyphs[b.icon];
+              return (
+                <Row
+                  key={b.id}
+                  size="tall"
+                  wrap
+                  leading={
+                    <RowIcon tint={b.severity === "high" ? "coral" : "accent"}>
+                      <Glyph size={16} />
+                    </RowIcon>
+                  }
+                  title={b.name}
+                  subtitle={
+                    <span className="flex items-center gap-1.5">
+                      {b.severity === "high" && (
+                        <IconAlertTriangle
+                          size={11}
+                          className="shrink-0 text-coral-text"
+                        />
+                      )}
+                      {b.evidence}
                     </span>
-                    <span
-                      className={`w-full rounded-t-[3px] transition-all duration-700 ease-ios ${
-                        v === maxOpens
-                          ? "bg-coral"
-                          : v > 12
-                            ? "bg-accent"
-                            : "bg-fill-1"
-                      }`}
-                      style={{ height: `${(v / maxOpens) * 74 + 6}px` }}
-                    />
-                    <span className="text-caption text-label-3">
-                      {lensDayLabels[i]}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                  }
+                  accessory="chevron"
+                  onPress={() => setOpenBehaviour(b)}
+                />
+              );
+            })}
+          </List>
 
-              {/* The accessible equivalent of the chart. */}
-              <table className="sr-only">
-                <caption>Pickups per two-hour block</caption>
-                <tbody>
-                  {lensDay.map((v, i) => (
-                    <tr key={lensDayLabels[i]}>
-                      <th scope="row">{lensDayLabels[i]}</th>
-                      <td>{v} pickups</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          {/* Closes the loop the copy already promises. */}
-          <List tint="coral">
-            <Row
-              size="tall"
-              leading={
-                <RowIcon tint="coral">
-                  <IconFlame size={16} />
-                </RowIcon>
-              }
-              title="Your midnight cluster is the biggest leak"
-              subtitle="23 pickups after 10pm — more than any other block."
-            />
+          <List>
             <Row
               leading={
                 <RowIcon tint="accent">
                   <IconTarget size={16} />
                 </RowIcon>
               }
-              title="Create a mission from this"
+              title="See all missions"
+              subtitle="Every mission here was generated from a habit above."
               accessory="chevron"
               href="/demo/missions"
+            />
+            <Row
+              leading={
+                <RowIcon tint="accent">
+                  <IconEye size={16} />
+                </RowIcon>
+              }
+              title="Watch it happen tonight"
+              subtitle="Today shows the same habits while you're still in them."
+              accessory="chevron"
+              onPress={() => setRange("today")}
             />
           </List>
 
@@ -211,6 +265,13 @@ export default function LensPage() {
           </p>
         </div>
       )}
+
+      <BehaviourSheet
+        behaviour={openBehaviour}
+        onOpenChange={(open) => !open && setOpenBehaviour(null)}
+        onAccept={acceptMission}
+        accepted={acceptedMissions}
+      />
     </>
   );
 }

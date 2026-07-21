@@ -44,6 +44,7 @@ export default function DemoHome() {
     completeMission,
     afkUntil,
     breakthrough,
+    nudgeLog,
   } = useAfk();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -328,6 +329,8 @@ export default function DemoHome() {
           <p className="text-caption mt-2 flex items-center gap-2 px-4 text-label-3">
             <IconShield size={13} className="shrink-0 text-accent-text" />
             Triage holds the line while this is active
+            {nudgeLog.length > 0 &&
+              ` · ${nudgeLog.length} nudge${nudgeLog.length === 1 ? "" : "s"} tonight`}
           </p>
         </section>
 

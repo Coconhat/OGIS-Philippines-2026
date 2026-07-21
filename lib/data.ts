@@ -475,10 +475,135 @@ export const breakthroughContacts = [
   { id: "c-oncall", name: "On-call rotation", detail: "Work · only when you're paged", on: false },
 ];
 
+/* ---- Unhealthy phone-usage behaviours ---------------------------------
+   The missing middle layer. Missions used to be a hardcoded list whose
+   `why` field *claimed* it came from Lens; nothing modelled that. This
+   is what Lens actually detects, what missions actually treat, and what
+   live nudges actually fire from — one vocabulary across all three.
+
+   Every behaviour here is anchored to a number the demo already asserts
+   somewhere (lensApps, lensDay, guardianNights), so this unifies
+   existing claims rather than inventing new ones. */
+
+export type BehaviourId =
+  | "doomscroll"
+  | "phantom"
+  | "churn"
+  | "latenight"
+  | "morningreach"
+  | "mealtime"
+  | "workbleed";
+
+export type Behaviour = {
+  id: BehaviourId;
+  name: string;
+  /** What it is, in plain language. */
+  definition: string;
+  /** How it's detected. A signal, not a vibe. */
+  signal: string;
+  /** The measurement this week — what earns the claim. */
+  evidence: string;
+  severity: "high" | "medium" | "low";
+  icon: "flame" | "eye" | "clock" | "moon" | "sun" | "heart" | "zap";
+};
+
+export const behaviours: Behaviour[] = [
+  {
+    id: "doomscroll",
+    name: "Doomscrolling",
+    definition:
+      "Long unbroken stretches in a feed, scrolling past far more than you stop to read.",
+    signal: "Session length in feed apps, plus scroll distance without interaction.",
+    evidence: "9.5h in ShortReel · longest single run 47 min",
+    severity: "high",
+    icon: "flame",
+  },
+  {
+    id: "phantom",
+    name: "Phantom checking",
+    definition:
+      "Opening an app when nothing asked you to. No notification, no message — just reflex.",
+    signal: "Opens with no notification in the seconds before them.",
+    evidence: "70% of ShortReel opens were unprompted",
+    severity: "high",
+    icon: "eye",
+  },
+  {
+    id: "latenight",
+    name: "Sleep displacement",
+    definition:
+      "Phone use pushing your bedtime later, night after night.",
+    signal: "Pickups after 10pm, measured against when you actually fell asleep.",
+    evidence: "23 pickups after 10pm · 5.8h average sleep",
+    severity: "high",
+    icon: "moon",
+  },
+  {
+    id: "workbleed",
+    name: "Work bleed",
+    definition:
+      "Answering work messages in hours that aren't work hours.",
+    signal: "Work-app activity outside your stated working window.",
+    evidence: "11 straight nights answering work messages",
+    severity: "high",
+    icon: "zap",
+  },
+  {
+    id: "churn",
+    name: "App-hopping",
+    definition:
+      "Cycling the same three or four apps in a loop, looking for something new in each.",
+    signal: "Switch rate inside a short window, and repeated app sequences.",
+    evidence: "9 switches in 4 minutes · same loop 6× this week",
+    severity: "medium",
+    icon: "clock",
+  },
+  {
+    id: "mealtime",
+    name: "Presence displacement",
+    definition:
+      "Reaching for the phone while you're with people.",
+    signal: "Usage during meals and calendar events marked social.",
+    evidence: "Slack checked 14× during dinners last week",
+    severity: "medium",
+    icon: "heart",
+  },
+  {
+    id: "morningreach",
+    name: "First-thing reach",
+    definition:
+      "The phone is the first thing you touch, before you're properly awake.",
+    signal: "Gap between your alarm going off and your first pickup.",
+    evidence: "Phone in hand within 4 min of waking, 6 of 7 days",
+    severity: "medium",
+    icon: "sun",
+  },
+];
+
+export function behaviourById(id: BehaviourId) {
+  return behaviours.find((b) => b.id === id);
+}
+
+export const severityTheme: Record<
+  Behaviour["severity"],
+  { chip: string; label: string }
+> = {
+  high: { chip: "bg-coral-dim text-coral-text", label: "Needs attention" },
+  medium: { chip: "bg-accent-dim text-accent-text", label: "Worth watching" },
+  low: { chip: "bg-fill-2 text-label-2", label: "Minor" },
+};
+
 export type Mission = {
   id: string;
   title: string;
   why: string;
+  /** The behaviour this mission treats. Missions are generated from
+      detected behaviour — this is the join, not decoration. */
+  behaviourId: BehaviourId;
+  /** The measurement that generated it. */
+  evidence: string;
+  /** `suggested` missions were generated but not yet taken on. */
+  status: "active" | "suggested";
   reward: string;
   progress: number; // 0..1
   goal: string;
@@ -500,6 +625,9 @@ export const missions: Mission[] = [
     id: "m1",
     title: "No social apps after 11pm",
     why: "Generated from your Lens: 70% of your late-night opens had no notification behind them.",
+    behaviourId: "latenight",
+    evidence: "23 pickups after 10pm · 5.8h average sleep",
+    status: "active",
     reward: "+3h reclaimed · Night Owl badge",
     progress: 2 / 3,
     goal: "3 nights",
@@ -514,6 +642,9 @@ export const missions: Mission[] = [
     id: "m2",
     title: "One phone-free dinner",
     why: "You checked Slack 14 times during dinners last week.",
+    behaviourId: "mealtime",
+    evidence: "Slack checked 14× during dinners last week",
+    status: "active",
     reward: "+2h reclaimed · Present badge",
     progress: 0,
     goal: "This week",
@@ -528,6 +659,9 @@ export const missions: Mission[] = [
     id: "m3",
     title: "Replace the Sunday scroll with a walk",
     why: "Sunday 9–11am is your longest doomscroll window.",
+    behaviourId: "doomscroll",
+    evidence: "9.5h in ShortReel · longest single run 47 min",
+    status: "active",
     reward: "+2h reclaimed · Fresh Air badge",
     progress: 0,
     goal: "Sunday morning",
@@ -537,6 +671,62 @@ export const missions: Mission[] = [
     emoji: "🌤️",
     schedule: "Sunday morning",
     points: "+2h",
+  },
+
+  /* Generated from behaviours Lens has flagged but you haven't taken on
+     yet. Keeping these unaccepted is what makes the generation visible —
+     if every mission were already active, "AFK noticed this and made you
+     a mission" would be a claim rather than something you watch happen. */
+  {
+    id: "m4",
+    title: "Leave the phone out of the bedroom",
+    why: "Your phone is the first thing you touch, 6 mornings out of 7 — and the last thing you put down.",
+    behaviourId: "morningreach",
+    evidence: "Phone in hand within 4 min of waking, 6 of 7 days",
+    status: "suggested",
+    reward: "+4h reclaimed · Clear Head badge",
+    progress: 0,
+    goal: "3 nights",
+    icon: "sun",
+    steps: { total: 3, done: 0 },
+    tint: "mint",
+    emoji: "🛏️",
+    schedule: "Tonight · bedtime",
+    points: "+4h",
+  },
+  {
+    id: "m5",
+    title: "No work apps after 7pm",
+    why: "You've answered work messages 11 nights running, on 5.8 hours of sleep.",
+    behaviourId: "workbleed",
+    evidence: "11 straight nights answering work messages",
+    status: "suggested",
+    reward: "+5h reclaimed · Off The Clock badge",
+    progress: 0,
+    goal: "5 evenings",
+    icon: "moon",
+    steps: { total: 5, done: 0 },
+    tint: "sky",
+    emoji: "🌆",
+    schedule: "Weeknights · 7pm",
+    points: "+5h",
+  },
+  {
+    id: "m6",
+    title: "Open ShortReel on purpose, not on reflex",
+    why: "70% of your opens had nothing behind them. This one asks you to name why before it lets you in.",
+    behaviourId: "phantom",
+    evidence: "70% of ShortReel opens were unprompted",
+    status: "suggested",
+    reward: "+3h reclaimed · Deliberate badge",
+    progress: 0,
+    goal: "1 day",
+    icon: "target",
+    steps: { total: 1, done: 0 },
+    tint: "coral",
+    emoji: "🎯",
+    schedule: "Tomorrow",
+    points: "+3h",
   },
 ];
 
@@ -652,3 +842,248 @@ export const emailClusters = [
   { name: "Work threads", count: 12, summary: "3 threads moved on without you; summaries ready." },
   { name: "Receipts & confirmations", count: 7, summary: "All filed." },
 ];
+
+/* ---- Behavioural nudges ----------------------------------------------
+   The other half of the product. Triage guards what comes *in*; this
+   guards what you reach *for*. Lens already reads the week back after
+   the fact — nudges are the same observation delivered in the moment,
+   while the habit is still happening.
+
+   The voice is Lens's: observational, numeric, never scolding. Every
+   nudge cites the number that earns it, because "you're on your phone
+   too much" is a judgement and "8 minutes, 0 notifications" is a fact. */
+
+/* A live nudge fires from the same behaviour taxonomy Lens detects and
+   missions treat — one vocabulary, so "doomscroll" means the same thing
+   in the chart, on the mission, and in the notification. */
+export type NudgeTrigger = BehaviourId;
+
+/** 1 notice · 2 firm · 3 mission at stake · 4 hard stop. */
+export type NudgeTier = 1 | 2 | 3 | 4;
+
+export type NudgeAction = {
+  label: string;
+  kind: "dismiss" | "snooze" | "mission" | "goAfk";
+};
+
+/* What actually earns each nudge. These are conditions on real signals
+   from the simulator — seconds spent inside the feed, screenfuls
+   scrolled, apps opened — not positions on a timeline. A nudge that
+   fires on a stopwatch regardless of what you did is a screensaver;
+   the whole claim of the feature is that the behaviour triggers it. */
+export type NudgeCondition =
+  | { kind: "dwell"; seconds: number }
+  | { kind: "switches"; count: number }
+  | { kind: "scroll"; screens: number };
+
+export type Nudge = {
+  id: string;
+  trigger: NudgeTrigger;
+  tier: NudgeTier;
+  /** The behaviour that earns it. */
+  when: NudgeCondition;
+  /** Colour never carries meaning alone — every tier ships a glyph. */
+  icon: "eye" | "clock" | "alertTriangle" | "moon";
+  headline: string;
+  body: string;
+  /** The measurement behind the claim. */
+  evidence: string;
+  missionId?: string;
+  actions: NudgeAction[];
+  /** Tiers 1–3 are non-modal banners. Only the hard stop takes over. */
+  present: "banner" | "alert";
+  autoDismissMs: number | null;
+};
+
+/* What the Briefing reads back in the morning. The outcome is the whole
+   point — a nudge you dismissed is more interesting than one you heeded,
+   because it's the one that cost you the mission. */
+export type NudgeRecord = {
+  nudgeId: string;
+  tier: NudgeTier;
+  at: string;
+  outcome: "heeded" | "snoozed" | "ignored";
+  missionId?: string;
+};
+
+export const nudges: Nudge[] = [
+  {
+    id: "n1",
+    trigger: "doomscroll",
+    tier: 1,
+    // You scrolled past a couple of screenfuls without stopping.
+    when: { kind: "scroll", screens: 2 },
+    icon: "eye",
+    headline: "You've been in ShortReel for 8 minutes.",
+    body: "Nothing brought you here. No notification, no message.",
+    evidence: "8 min · 0 notifications",
+    actions: [{ label: "Okay", kind: "dismiss" }],
+    present: "banner",
+    autoDismissMs: 5000,
+  },
+  {
+    id: "n2",
+    trigger: "churn",
+    tier: 2,
+    // You bounced between apps and came back. That's the loop.
+    when: { kind: "switches", count: 3 },
+    icon: "clock",
+    headline: "Nine app switches in four minutes.",
+    body: "ShortReel → Mail → Slack → ShortReel. Same loop as last Tuesday.",
+    evidence: "9 switches · 4 min",
+    actions: [
+      { label: "Okay", kind: "dismiss" },
+      { label: "Mute for an hour", kind: "snooze" },
+    ],
+    present: "banner",
+    autoDismissMs: 7000,
+  },
+  {
+    id: "n3",
+    trigger: "latenight",
+    tier: 3,
+    // You've now been in there long enough to cross your own line.
+    when: { kind: "dwell", seconds: 20 },
+    icon: "alertTriangle",
+    headline: "It's 11:26pm — night 3 of your mission.",
+    body: "“No social apps after 11pm.” You're two nights in. This is the one that breaks the streak.",
+    evidence: "26 min past your line",
+    missionId: "m1",
+    actions: [
+      { label: "Close ShortReel", kind: "mission" },
+      { label: "Five more minutes", kind: "snooze" },
+    ],
+    present: "banner",
+    // Tier 3 puts a mission on the table. It waits for an answer.
+    autoDismissMs: null,
+  },
+  {
+    id: "n4",
+    trigger: "latenight",
+    tier: 4,
+    // And you stayed anyway.
+    when: { kind: "dwell", seconds: 38 },
+    icon: "moon",
+    headline: "26 minutes. Tonight's mission is gone.",
+    body: "I can hold the door until 7am, the way I did the last two nights.",
+    evidence: "Streak 2 → 0",
+    missionId: "m1",
+    actions: [
+      { label: "Go AFK until 7am", kind: "goAfk" },
+      { label: "Keep scrolling", kind: "dismiss" },
+    ],
+    present: "alert",
+    autoDismissMs: null,
+  },
+];
+
+/* Coral *tint* is your own behaviour; coral *fill* (card-alert) is
+   someone else needing you. Never a nudge on card-alert — that beat
+   belongs to the breakthrough. */
+export const nudgeTierTheme: Record<
+  NudgeTier,
+  { chip: string; stripe: string; label: string }
+> = {
+  1: { chip: "bg-fill-2 text-label-2", stripe: "bg-fill-1", label: "Noticing" },
+  2: {
+    chip: "bg-accent-dim text-accent-text",
+    stripe: "bg-accent",
+    label: "Pattern",
+  },
+  3: {
+    chip: "bg-coral-dim text-coral-text",
+    stripe: "bg-coral",
+    label: "Mission at stake",
+  },
+  4: {
+    chip: "bg-coral-dim text-coral-text",
+    stripe: "bg-coral",
+    label: "Hard stop",
+  },
+};
+
+/* The fake phone the simulator puts you inside: a home screen you tap
+   out of, not a button that says "pretend you're scrolling". App-hopping
+   has to be something you *do* — the churn nudge lands differently when
+   you caused it.
+
+   ShortReel is already the 70%-compulsive app in `lensApps`, so the sim
+   and the chart agree with each other. */
+
+export type SimApp = {
+  id: string;
+  name: string;
+  /** Key into `simMarks` in components/demo/sim-icons.tsx. */
+  icon: string;
+  /** Inline background, same idiom as `lensApps`. iOS icons are a
+      single hue, lighter at the top — not a two-colour diagonal. */
+  color: string;
+  dock?: boolean;
+  /** The artwork *is* the tile (Calendar's page, Notes' paper, the map)
+      so it draws edge to edge. Glyph-on-a-field icons (Mail, Music) sit
+      inset instead. Getting this wrong is what made Notes render as a
+      floating yellow bar rather than a header band. */
+  bleed?: boolean;
+  /** The doomscroll app. Everything else is a stub you bounce off. */
+  feed?: boolean;
+  /** What the stub screen says when you open it. */
+  stub?: string;
+  badge?: number;
+};
+
+export const simApps: SimApp[] = [
+  /* Backgrounds mirror the real apps: most are a white tile carrying a
+     coloured mark; only Mail/Messages/Phone/Music/ShortReel are a
+     saturated tile with a white glyph. */
+  {
+    id: "shortreel",
+    name: "ShortReel",
+    icon: "play",
+    color: "linear-gradient(180deg, #2a2a2e 0%, #08080a 100%)",
+    feed: true,
+    badge: 12,
+  },
+  { id: "mail", name: "Mail", icon: "mail", color: "linear-gradient(180deg, #52b1ff 0%, #1a76e8 100%)", badge: 3, stub: "3 unread. None of them are for tonight." },
+  { id: "slack", name: "Slack", icon: "hash", color: "#ffffff", bleed: true, stub: "Your team is asleep. Your dot is green anyway." },
+  { id: "photos", name: "Photos", icon: "photos", color: "#ffffff", bleed: true, stub: "One year ago today, you were outside." },
+  { id: "maps", name: "Maps", icon: "map", color: "#ffffff", bleed: true, stub: "You are at home. You have been all evening." },
+  { id: "music", name: "Music", icon: "music", color: "linear-gradient(180deg, #fc5c65 0%, #eb2f4b 100%)", stub: "Nothing playing." },
+  { id: "notes", name: "Notes", icon: "notes", color: "#ffffff", bleed: true, stub: "“things to do tomorrow” — last edited 6 days ago." },
+  { id: "settings", name: "Settings", icon: "gear", color: "linear-gradient(180deg, #a9adb5 0%, #71757d 100%)", stub: "Screen Time: you already know." },
+  /* A third row, so the grid fills like a real springboard. Two rows
+     floating above a void is the tell that it's a mockup. */
+  { id: "calendar", name: "Calendar", icon: "calendar", color: "#ffffff", bleed: true, stub: "Nothing until 9am tomorrow." },
+  { id: "camera", name: "Camera", icon: "camera", color: "linear-gradient(180deg, #7d818a 0%, #4a4d54 100%)", stub: "Last photo: a screenshot of a post." },
+  { id: "clock", name: "Clock", icon: "clock", color: "linear-gradient(180deg, #2c2e33 0%, #0e0f12 100%)", bleed: true, stub: "Alarm set for 6:40am. In 7 hours 36 minutes." },
+  { id: "weather", name: "Weather", icon: "weather", color: "linear-gradient(180deg, #4aa8f0 0%, #1f6fd0 100%)", bleed: true, stub: "Clear, 24°. You have not been outside since 6pm." },
+  /* A fourth row. Twelve apps left a dead void in the lower half — real
+     home screens are full, and the emptiness read as a mockup. */
+  { id: "health", name: "Health", icon: "health", color: "#ffffff", bleed: true, stub: "You walked 2,140 steps today. Your weekly average is 6,800." },
+  { id: "podcasts", name: "Podcasts", icon: "podcasts", color: "linear-gradient(180deg, #b07ae0 0%, #7d3fc4 100%)", stub: "3 episodes downloaded. None played." },
+  { id: "appstore", name: "App Store", icon: "appstore", color: "linear-gradient(180deg, #2fa4ff 0%, #0a63c9 100%)", stub: "7 updates available." },
+  { id: "reminders", name: "Reminders", icon: "reminders", color: "#ffffff", bleed: true, stub: "“Call the dentist” — moved 4 times." },
+  { id: "phone", name: "Phone", icon: "phone", color: "linear-gradient(180deg, #5ee07a 0%, #23bf47 100%)", dock: true, stub: "No missed calls. Nobody is trying to reach you." },
+  { id: "browser", name: "Safari", icon: "compass", color: "#ffffff", bleed: true, dock: true, stub: "14 tabs. You will not read any of them." },
+  { id: "messages", name: "Messages", icon: "message", color: "linear-gradient(180deg, #5ee07a 0%, #23bf47 100%)", dock: true, badge: 1, stub: "Mom, 8:14pm. You'll reply tomorrow." },
+  {
+    id: "afk",
+    name: "AFK",
+    icon: "afk",
+    color: "linear-gradient(180deg, #ffb04d 0%, #f07800 100%)",
+    dock: true,
+    stub: "You're already here.",
+  },
+];
+
+export const simSession = {
+  app: "ShortReel",
+  clock: "11:04pm",
+  posts: [
+    { id: "p1", handle: "@nightowl.clips", caption: "6 things you didn't know about your houseplant", meta: "1.2M views" },
+    { id: "p2", handle: "@kitchenspeedrun", caption: "Dinner in 47 seconds (you will not make this)", meta: "890K views" },
+    { id: "p3", handle: "@oddlysatisfying", caption: "Watch this loop 40 times, apparently", meta: "3.4M views" },
+    { id: "p4", handle: "@debate.club", caption: "Someone is wrong and 4,000 people are arguing", meta: "612K views" },
+    { id: "p5", handle: "@catsofshortreel", caption: "He does this every night at 11", meta: "2.1M views" },
+    { id: "p6", handle: "@nightowl.clips", caption: "Part 2 of the thing you never finished part 1 of", meta: "740K views" },
+  ],
+};

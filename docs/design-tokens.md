@@ -37,6 +37,27 @@ warm-paper; don't reintroduce one.
 All four carry **ink text**, not white. Bright fills take dark text — white on
 `#ff6154` is only 3.0:1.
 
+### The nudge banner is opaque — deliberately
+
+`components/ui/notification-banner.tsx` uses a solid `bg-app-surface`, not
+`material-bar`. It was translucent once and the ShortReel feed was legible
+straight through it: **`backdrop-filter` does not composite on an element running
+a transform animation**, so the blur silently dropped and left only the 76% white.
+A notification has to be legible over arbitrary content. Depth comes from
+`shadow-float`. Don't "restore" the frosted look.
+
+### Coral tint vs coral fill
+
+**Coral *tint* (`coral-dim` / `coral-text`) is your own behaviour. Coral *fill*
+(`bg-card-alert`) is someone else needing you.**
+
+The breakthrough — a real person got past the door — owns `card-alert` and the
+`Alert variant="critical"` treatment. Behavioural nudges are the opposite
+vector: nobody called, you went anyway. They never use `card-alert`, and the
+tier-4 hard stop uses `Alert variant="standard"`, not `critical`. Giving both
+the same surface makes the app's most loaded beat indistinguishable from a
+screen-time reminder.
+
 ### The fill-vs-text rule
 
 `accent` `coral` `mint` `sky` are **fill and glyph colours only.** All four fail
@@ -88,13 +109,16 @@ x-height reads lighter than SF.
 
 - `shadow-flat` — lists, most cards. **The default.**
 - `shadow-raised` — **one element per screen, maximum.**
-- `shadow-float` — sheets, tab bar, alerts only.
+- `shadow-float` — sheets, tab bar, alerts, nudge banners only.
 
 Colour separates surfaces, not shadow. Five identical shadowed cards is the
 failure mode this replaced.
 
-Current raised element per screen: Home → Doorkeeper hero. Lens → the weekly
-story. Triage / Briefing / Missions → none.
+Current raised element per screen: Home → Doorkeeper hero. Lens (Week) → the
+weekly story. Lens (Today) / Triage / Briefing / Missions → none.
+
+The nudge banner is `shadow-float`, so it never competes with a screen's raised
+element regardless of which tab it appears over.
 
 ---
 
@@ -117,7 +141,15 @@ review criteria, not suggestions.
 4. **Orange replaces systemBlue everywhere** — tabs, switches, segmented
    selection, progress, focus rings.
 5. **Colour always pairs with a glyph.** `VerdictBadge` carries an icon;
-   urgency and compulsive-% carry glyphs. No meaning by hue alone, ever.
+   urgency, compulsive-%, nudge tiers and behaviour severity all carry glyphs.
+   No meaning by hue alone, ever.
+6. **The simulated phone (`components/demo/scroll-sim.tsx`) is outside this
+   system on purpose.** It has its own wallpaper, its own icon set
+   (`sim-icons.tsx`) and its own type sizes, because it is meant to read as
+   *somewhere else* — another OS you're being pulled into. Don't unify it with
+   the AFK palette; the contrast is the point. Its app icons follow iOS
+   convention, where most tiles are white with a coloured mark rather than a
+   coloured tile with a white glyph.
 
 ---
 
@@ -142,6 +174,16 @@ colour-only signals · visible focus ring · reduced motion respected.
 Reduced motion is **not** just the CSS guard — Triage's auto-advance is a JS
 timer, so it checks `useReducedMotion()` and renders all six events resolved,
 with no auto-play. There's also a manual pause control (WCAG 2.2.2).
+
+The nudge engine (`lib/nudge-context.tsx`) is the **second** such timer, but only
+partly. Nudges fire off behavioural conditions (`NudgeCondition`), and two of the
+three signals are **event-driven**: `scroll` and `switches` need no timer, so
+tiers 1 and 2 fire normally under reduced motion. Only `dwell` needs the
+interval, so tiers 3 and 4 are reachable via **"Next beat"**, which forces the
+next nudge regardless of condition. Banner auto-dismiss is disabled under reduced
+motion (auto-dismissing text is a 2.2.1 timing issue independent of motion), and
+Lens → Today renders all four nudges as a static list so the copy is reachable
+without ever running the sim. Pause and Step ship regardless of preference.
 
 ---
 

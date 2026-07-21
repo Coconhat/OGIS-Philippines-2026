@@ -9,7 +9,7 @@
    inside a tappable card would be invalid HTML and would break keyboard
    order. */
 
-import type { Mission } from "@/lib/data";
+import { behaviourById, type Mission } from "@/lib/data";
 import { Pressable } from "@/components/ui/pressable";
 import { IconCheck, IconZap } from "@/components/icons";
 
@@ -39,7 +39,8 @@ export const labelTint: Record<MissionTint, string> = {
 type MissionRowProps = {
   mission: Mission;
   done: boolean;
-  onComplete: () => void;
+  /** Optional so display-only renders (the capture harness) can omit it. */
+  onComplete?: () => void;
   /** Either open a sheet in place, or navigate to the Missions tab. */
   onOpen?: () => void;
   href?: string;
@@ -75,10 +76,19 @@ export function MissionRow({
         </span>
 
         <span className="min-w-0 flex-1">
+          {/* Schedule *and* the habit this treats — a mission with no
+              visible cause reads as a generic self-help tip, which is
+              exactly what these are not. */}
           <span
             className={`text-caption block font-bold tracking-wide uppercase ${labelTint[m.tint]}`}
           >
             {m.schedule}
+            {behaviourById(m.behaviourId) && (
+              <span className="font-semibold normal-case opacity-70">
+                {" · "}
+                {behaviourById(m.behaviourId)?.name}
+              </span>
+            )}
           </span>
           <span
             className={`text-headline block text-balance ${
@@ -118,7 +128,7 @@ export function MissionRow({
 
       {/* The satisfying bit. */}
       <Pressable
-        onPress={() => !done && onComplete()}
+        onPress={() => !done && onComplete?.()}
         highlight="scale"
         haptics="medium"
         disabled={done}

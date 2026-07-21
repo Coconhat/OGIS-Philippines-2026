@@ -7,6 +7,8 @@ import {
   briefingDecisions,
   briefingHandled,
   emailClusters,
+  missions,
+  nudges,
   verdictTheme,
   type Verdict,
 } from "@/lib/data";
@@ -24,11 +26,26 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { VerdictBadge } from "@/components/ui/verdict-badge";
 import { InboxIllo } from "@/components/illustrations";
 import {
+  IconAlertTriangle,
   IconCheck,
+  IconClock,
   IconInbox,
   IconLock,
   IconUndo,
 } from "@/components/icons";
+
+/* Triage guards what came in; this guards what you reached for. The
+   outcome is the point — the nudge you waved away at 11:26pm is still
+   here in the morning, next to the mission it cost. */
+const nudgeOutcome = {
+  heeded: { tint: "mint" as const, icon: IconCheck, label: "You stopped" },
+  snoozed: { tint: "gray" as const, icon: IconClock, label: "You snoozed it" },
+  ignored: {
+    tint: "coral" as const,
+    icon: IconAlertTriangle,
+    label: "You kept going",
+  },
+};
 
 type HandledRow = {
   id: string;
@@ -48,6 +65,7 @@ export default function BriefingPage() {
     undone,
     toggleUndone,
     sessionLevel,
+    nudgeLog,
   } = useAfk();
 
   const [mailOpen, setMailOpen] = useState(false);
@@ -234,6 +252,43 @@ export default function BriefingPage() {
             })}
           </ul>
         </section>
+
+        {nudgeLog.length > 0 && (
+          <List
+            header="Your own attention"
+            footer="Nudges are on-device and unenforced. AFK can say something; only you can close the app."
+          >
+            {nudgeLog.map((r) => {
+              const n = nudges.find((x) => x.id === r.nudgeId);
+              const m = missions.find((x) => x.id === r.missionId);
+              const c = nudgeOutcome[r.outcome];
+              const Icon = c.icon;
+              return (
+                <Row
+                  key={r.nudgeId}
+                  size="tall"
+                  wrap
+                  leading={
+                    <RowIcon tint={c.tint}>
+                      <Icon size={16} />
+                    </RowIcon>
+                  }
+                  title={n?.headline ?? "Nudge"}
+                  subtitle={
+                    <>
+                      {c.label} · {r.at}
+                      {m && (
+                        <span className="mt-0.5 block">
+                          Mission: {m.title}
+                        </span>
+                      )}
+                    </>
+                  }
+                />
+              );
+            })}
+          </List>
+        )}
 
         <List>
           <Row

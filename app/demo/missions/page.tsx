@@ -3,22 +3,27 @@
 import { useState } from "react";
 import { useAfk } from "@/lib/afk-context";
 import { useDemoShell } from "@/lib/demo-shell";
-import { feed, missions, type Mission } from "@/lib/data";
+import { feed, missions, nudges, type Mission } from "@/lib/data";
 import { NavBar } from "@/components/ui/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Tile } from "@/components/ui/tile";
+import { List, Row, RowIcon } from "@/components/ui/list";
 import { Sheet } from "@/components/ui/sheet";
 import { MissionRow, chipTint, dotTint } from "@/components/demo/mission-row";
+import {
+  behaviourById,
+  behaviourGlyphs,
+} from "@/components/demo/behaviour-sheet";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FlagIllo } from "@/components/illustrations";
 import {
+  IconAlertTriangle,
   IconCamera,
   IconChart,
   IconCheck,
   IconFlame,
   IconHeart,
-  IconShield,
   IconZap,
 } from "@/components/icons";
 
@@ -38,11 +43,29 @@ const sceneLabel: Record<string, string> = {
 
 export default function MissionsPage() {
   const { scrollRef } = useDemoShell();
-  const { completedMissions, completeMission, liked, toggleLiked } = useAfk();
+  const {
+    completedMissions,
+    completeMission,
+    acceptedMissions,
+    acceptMission,
+    liked,
+    toggleLiked,
+    nudgeLog,
+  } = useAfk();
+
+  // Only the nudges that actually defended a mission belong here.
+  const missionNudges = nudgeLog.filter((r) => r.missionId);
   const [tab, setTab] = useState<"challenges" | "feed">("challenges");
   const [detail, setDetail] = useState<Mission | null>(null);
 
-  const allDone = missions.every((m) => completedMissions.includes(m.id));
+  /* A mission is on your list if it shipped active or you took it on.
+     Everything else is still a suggestion AFK generated from a habit. */
+  const isMine = (m: Mission) =>
+    m.status === "active" || acceptedMissions.includes(m.id);
+  const active = missions.filter(isMine);
+  const suggested = missions.filter((m) => !isMine(m));
+
+  const allDone = active.every((m) => completedMissions.includes(m.id));
 
   const myPosts = missions
     .filter((m) => completedMissions.includes(m.id))
@@ -101,6 +124,39 @@ export default function MissionsPage() {
               </div>
             </Tile> */}
 
+            {/* The README claims triage holds the line while a mission is
+                active. This is the first screen that shows it happening
+                rather than asserting it. */}
+            {missionNudges.length > 0 && (
+              <List tint="coral" header="Held the line tonight">
+                {missionNudges.map((r) => {
+                  const n = nudges.find((x) => x.id === r.nudgeId);
+                  return (
+                    <Row
+                      key={r.nudgeId}
+                      size="tall"
+                      wrap
+                      leading={
+                        <RowIcon tint={r.outcome === "heeded" ? "mint" : "coral"}>
+                          {r.outcome === "heeded" ? (
+                            <IconCheck size={16} />
+                          ) : (
+                            <IconAlertTriangle size={16} />
+                          )}
+                        </RowIcon>
+                      }
+                      title={n?.headline ?? "Nudge"}
+                      subtitle={
+                        r.outcome === "heeded"
+                          ? "You closed the app. Streak intact."
+                          : "You stayed. The streak takes the hit."
+                      }
+                    />
+                  );
+                })}
+              </List>
+            )}
+
             {allDone ? (
               <EmptyState
                 illustration={<FlagIllo />}
@@ -109,7 +165,7 @@ export default function MissionsPage() {
               />
             ) : (
               <ul className="space-y-2.5">
-                {missions.map((m) => (
+                {active.map((m) => (
                   <li key={m.id}>
                     <MissionRow
                       mission={m}
@@ -122,8 +178,64 @@ export default function MissionsPage() {
               </ul>
             )}
 
+            {/* The generation loop, made visible. AFK spotted the habit
+                and wrote the mission; taking it on is your move. */}
+            {suggested.length > 0 && (
+              <section>
+                <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
+                  Generated from habits AFK spotted
+                </h2>
+                <ul className="space-y-2.5">
+                  {suggested.map((m) => {
+                    const b = behaviourById(m.behaviourId);
+                    const Glyph = b ? behaviourGlyphs[b.icon] : IconChart;
+                    return (
+                      <li key={m.id}>
+                        <div className="rounded-tile bg-app-surface p-3.5">
+                          <p
+                            className={`text-caption inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 font-bold tracking-wide uppercase ${chipTint[m.tint]}`}
+                          >
+                            <Glyph size={11} />
+                            {b?.name ?? "Habit"}
+                          </p>
+                          <p className="text-headline mt-2 text-balance">
+                            {m.title}
+                          </p>
+                          <p className="text-footnote mt-1 text-balance text-label-2">
+                            {m.why}
+                          </p>
+                          <p className="text-caption mt-2 flex items-center gap-1.5 tabular-nums text-label-3">
+                            <IconChart size={11} className="shrink-0" />
+                            {m.evidence}
+                          </p>
+                          <div className="mt-3 flex items-center gap-2">
+                            <Button
+                              variant="tinted"
+                              size="small"
+                              onPress={() => acceptMission(m.id)}
+                            >
+                              Take this on
+                            </Button>
+                            <Button
+                              variant="plain"
+                              size="small"
+                              tint="ink"
+                              onPress={() => setDetail(m)}
+                            >
+                              Details
+                            </Button>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
             <p className="text-footnote px-1 text-center text-label-3 text-balance">
-              New missions generate every Sunday from your Lens.
+              Missions aren&apos;t generic. Each one is generated from a habit
+              Lens measured on this device.
             </p>
           </>
         ) : (

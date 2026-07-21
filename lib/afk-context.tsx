@@ -22,6 +22,7 @@ import {
   breakthroughContacts,
   durations,
   type LevelId,
+  type NudgeRecord,
   type ResolvedEvent,
 } from "./data";
 
@@ -37,11 +38,19 @@ type Persisted = {
   startedAt: number | null;
   handled: ResolvedEvent[];
   completedMissions: string[];
+  /** Suggested missions the user has taken on. Missions are generated
+      from detected behaviour; accepting one is how that becomes real. */
+  acceptedMissions: string[];
   guardian: GuardianState;
   decisions: Record<string, string>;
   undone: string[];
   liked: string[];
   everWentAfk: boolean;
+  /* What you did with each nudge. Only the outcomes persist — the live
+     tick, elapsed time and switch count live in NudgeProvider, which
+     doesn't serialize, because writing sessionStorage once a second
+     would re-render every consumer on all five tabs. */
+  nudgeLog: NudgeRecord[];
 };
 
 const initial: Persisted = {
@@ -55,17 +64,27 @@ const initial: Persisted = {
   startedAt: null,
   handled: [],
   completedMissions: [],
+  acceptedMissions: [],
   guardian: "pending",
   decisions: {},
   undone: [],
   liked: [],
   everWentAfk: false,
+  nudgeLog: [],
 };
 
 /* v2: `handled` changed shape (flat TriageEvent → ResolvedEvent). A stale
    v1 blob would hydrate rows with no `level` and no resolved outcome, so
-   the key bump discards them rather than half-migrating. */
-const KEY = "afk-demo-v2";
+   the key bump discards them rather than half-migrating.
+
+   v3: added `nudgeLog`. `readSession` spreads `initial` first, so a v2
+   blob would in fact hydrate safely here — this bump is a deliberate
+   discard rather than a migration, on the grounds that a half-populated
+   demo run is more confusing than a fresh one.
+
+   v4: added `acceptedMissions` when missions became derived from
+   behaviours. Same reasoning as v3 — discard rather than half-migrate. */
+const KEY = "afk-demo-v4";
 
 function readSession(): Persisted | null {
   try {
@@ -86,7 +105,9 @@ type AfkState = Persisted & {
   setDuration: (id: string) => void;
   toggleBreakthrough: (id: string) => void;
   pushHandled: (ev: ResolvedEvent) => void;
+  pushNudge: (record: NudgeRecord) => void;
   completeMission: (id: string) => void;
+  acceptMission: (id: string) => void;
   setGuardian: (state: GuardianState) => void;
   setDecision: (id: string, outcome: string) => void;
   toggleUndone: (id: string) => void;
@@ -175,12 +196,35 @@ export function AfkProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
+  /* Last write wins per nudge: answering tier 3 after snoozing it should
+     replace the snooze, not stack a second row in the briefing. */
+  const pushNudge = useCallback(
+    (record: NudgeRecord) =>
+      patch((p) => ({
+        nudgeLog: [
+          record,
+          ...p.nudgeLog.filter((r) => r.nudgeId !== record.nudgeId),
+        ],
+      })),
+    [patch],
+  );
+
   const completeMission = useCallback(
     (id: string) =>
       patch((p) =>
         p.completedMissions.includes(id)
           ? {}
           : { completedMissions: [...p.completedMissions, id] },
+      ),
+    [patch],
+  );
+
+  const acceptMission = useCallback(
+    (id: string) =>
+      patch((p) =>
+        p.acceptedMissions.includes(id)
+          ? {}
+          : { acceptedMissions: [...p.acceptedMissions, id] },
       ),
     [patch],
   );
@@ -244,7 +288,9 @@ export function AfkProvider({ children }: { children: ReactNode }) {
       setDuration,
       toggleBreakthrough,
       pushHandled,
+      pushNudge,
       completeMission,
+      acceptMission,
       setGuardian,
       setDecision,
       toggleUndone,
@@ -259,7 +305,9 @@ export function AfkProvider({ children }: { children: ReactNode }) {
       setDuration,
       toggleBreakthrough,
       pushHandled,
+      pushNudge,
       completeMission,
+      acceptMission,
       setGuardian,
       setDecision,
       toggleUndone,
