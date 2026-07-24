@@ -141,14 +141,16 @@ export default function LensPage() {
             </p>
             <p className="text-title-2 mt-4 text-balance">
               Short-video apps took{" "}
-              <span className="text-accent-text">9.5 hours</span> this week,
-              mostly between 11pm and 1am. That&apos;s your most compulsive app
+              <span className="text-accent-text">9.5 hours</span>{" "}
+              this week, mostly between 11pm and 1am. That&apos;s your most
+              compulsive app
               — <span className="text-coral-text">70% of opens</span> had no
               notification behind them.
             </p>
             <p className="text-subhead mt-3 text-label-2">
-              Your phone didn&apos;t call you. You went anyway. That&apos;s the
-              habit AFK Missions are built from.
+              Your phone didn&apos;t call you — you opened it out of habit.
+              Three of those sessions ran past an hour without a break, so AFK
+              turned the pattern into a mission.
             </p>
           </Tile>
 
@@ -195,12 +197,12 @@ export default function LensPage() {
             })}
           </List>
 
-          {/* The habits themselves, not just the hours. This is what
-              missions get generated from — tapping one shows the
-              measurement and the mission it produced. */}
+          {/* The habits themselves, not just the hours. Each one carries
+              a line; crossing the line is what writes a mission. Tapping
+              shows the rule, the crossing, and what it wrote. */}
           <List
             header="What we're seeing"
-            footer="Ranked by how much they're costing you. Tap one to see the mission it generated."
+            footer="Ranked by how much they're costing you. Tap one for the rule it crossed and the mission that wrote."
           >
             {ranked.map((b) => {
               const Glyph = behaviourGlyphs[b.icon];
@@ -216,14 +218,21 @@ export default function LensPage() {
                   }
                   title={b.name}
                   subtitle={
-                    <span className="flex items-center gap-1.5">
-                      {b.severity === "high" && (
-                        <IconAlertTriangle
-                          size={11}
-                          className="shrink-0 text-coral-text"
-                        />
-                      )}
-                      {b.evidence}
+                    <span className="mt-0.5 block space-y-0.5">
+                      <span className="flex items-center gap-1.5">
+                        {b.severity === "high" && (
+                          <IconAlertTriangle
+                            size={11}
+                            className="shrink-0 text-coral-text"
+                          />
+                        )}
+                        {b.rule.observed}
+                      </span>
+                      {/* The line it went past, so the row states the
+                          mechanism and not just the number. */}
+                      <span className="block text-label-3">
+                        Rule: {b.rule.threshold} · crossed {b.rule.crossedAt}
+                      </span>
                     </span>
                   }
                   accessory="chevron"
@@ -241,7 +250,7 @@ export default function LensPage() {
                 </RowIcon>
               }
               title="See all missions"
-              subtitle="Every mission here was generated from a habit above."
+              subtitle="Every one was written by a rule above crossing."
               accessory="chevron"
               href="/demo/missions"
             />

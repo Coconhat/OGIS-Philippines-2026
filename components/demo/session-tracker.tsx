@@ -10,6 +10,8 @@ import { useAfk } from "@/lib/afk-context";
 import { useNudge } from "@/lib/nudge-context";
 import {
   behaviourById,
+  missionCreatedTheme,
+  missionRules,
   nudges,
   nudgeTierTheme,
   simSession,
@@ -24,6 +26,7 @@ import {
   IconClock,
   IconEye,
   IconMoon,
+  IconTarget,
 } from "@/components/icons";
 
 const glyphs = {
@@ -31,6 +34,7 @@ const glyphs = {
   clock: IconClock,
   alertTriangle: IconAlertTriangle,
   moon: IconMoon,
+  target: IconTarget,
 };
 
 const outcomeChrome = {
@@ -46,9 +50,16 @@ function NudgeGlyph({ nudge }: { nudge: Nudge }) {
 
 export function SessionTracker() {
   const { nudgeLog } = useAfk();
-  const { startSim, firedIds, reduced } = useNudge();
+  const { startSim, firedIds, firedRuleIds, reduced } = useNudge();
 
-  const fired = nudges.filter((n) => firedIds.includes(n.id));
+  /* Warnings first, then the crossing that writes a mission — the same
+     order they arrive in, so the ladder reads as a ladder. */
+  const ruleNotices = missionRules.map((r) => r.notice);
+  const fired = [
+    ...nudges.filter((n) => firedIds.includes(n.id)),
+    ...ruleNotices.filter((n) => firedRuleIds.includes(n.id)),
+  ];
+  const preview = [...nudges, ...ruleNotices];
 
   return (
     <div className="space-y-5">
@@ -63,7 +74,8 @@ export function SessionTracker() {
         </p>
         <p className="text-subhead mt-3 text-label-2">
           {simSession.app} is your most compulsive app. Open a phone, tap it,
-          and see what a late-night scroll actually gets you.
+          and see what a late-night scroll actually gets you. Stay past an hour
+          and it stops warning you and writes you a mission instead.
         </p>
         <Button
           variant="tinted"
@@ -84,36 +96,52 @@ export function SessionTracker() {
           has to be reachable without running it at all. */}
       {(fired.length > 0 || reduced) && (
         <List
-          header={fired.length > 0 ? "Nudges so far" : "What AFK would say"}
+          header={fired.length > 0 ? "So far tonight" : "What AFK would say"}
           footer={
             fired.length > 0
               ? undefined
-              : "Every nudge cites the number behind it. No nudge asserts anything it can't point at."
+              : "Every line cites the number behind it. Nothing asserts anything it can't point at — and the last one stops warning you and writes a mission."
           }
         >
-          {(fired.length > 0 ? fired : nudges).map((n) => (
-            <Row
-              key={n.id}
-              size="tall"
-              wrap
-              leading={
-                <RowIcon tint={n.tier >= 3 ? "coral" : n.tier === 2 ? "accent" : "gray"}>
-                  <NudgeGlyph nudge={n} />
-                </RowIcon>
-              }
-              title={n.headline}
-              subtitle={
-                <>
-                  {nudgeTierTheme[n.tier].label} · {n.evidence}
-                  {behaviourById(n.trigger) && (
-                    <span className="mt-0.5 block">
-                      Habit: {behaviourById(n.trigger)?.name}
-                    </span>
-                  )}
-                </>
-              }
-            />
-          ))}
+          {(fired.length > 0 ? fired : preview).map((n) => {
+            const written = n.kind === "missionCreated";
+            return (
+              <Row
+                key={n.id}
+                size="tall"
+                wrap
+                leading={
+                  <RowIcon
+                    tint={
+                      written
+                        ? "mint"
+                        : n.tier >= 3
+                          ? "coral"
+                          : n.tier === 2
+                            ? "accent"
+                            : "gray"
+                    }
+                  >
+                    <NudgeGlyph nudge={n} />
+                  </RowIcon>
+                }
+                title={n.headline}
+                subtitle={
+                  <>
+                    {written
+                      ? missionCreatedTheme.label
+                      : nudgeTierTheme[n.tier].label}{" "}
+                    · {n.evidence}
+                    {behaviourById(n.trigger) && (
+                      <span className="mt-0.5 block">
+                        Habit: {behaviourById(n.trigger)?.name}
+                      </span>
+                    )}
+                  </>
+                }
+              />
+            );
+          })}
         </List>
       )}
 

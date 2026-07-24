@@ -7,49 +7,84 @@ import {
   BellIllo,
   BubblesIllo,
   CallIllo,
+  ChartIllo,
   DialIllo,
   FlagIllo,
   InboxIllo,
   LockIllo,
   MoonIllo,
+  PalmIllo,
 } from "@/components/illustrations";
 import { IconArrowRight, IconCheck, IconMoon } from "@/components/icons";
 
-const features = [
+/* Two pillars, equally weighted. People fail to disconnect for two
+   different reasons — fear of missing something, and the habit of
+   reaching for the phone — and AFK is one system for each. Listing all
+   eight features flat made Companion read as a bonus feature of a
+   notification app, which inverts half the product. */
+const pillars = [
   {
-    illo: BubblesIllo,
-    title: "Replies while you're gone",
-    body: "Friendly holding replies to anything that can wait — always signed as your assistant.",
+    name: "AFK Guardian",
+    role: "Your AI digital representative",
+    line: "Handles what comes in, so leaving costs you nothing.",
+    features: [
+      {
+        illo: BubblesIllo,
+        title: "Replies while you're gone",
+        body: "Friendly holding replies to anything that can wait — always signed as your assistant.",
+      },
+      {
+        illo: BellIllo,
+        title: "Real emergencies ring through",
+        body: "A fire alarm, not a doorbell. Mom at 2am gets through. Spam never does.",
+      },
+      {
+        illo: CallIllo,
+        title: "Calls get a receptionist",
+        body: "AFK answers, takes a message, and books callbacks around your calendar.",
+      },
+      {
+        illo: DialIllo,
+        title: "You set the dial",
+        body: "From just watching to handling it all — per person, per app. Never money, never contracts.",
+      },
+    ],
   },
   {
-    illo: BellIllo,
-    title: "Real emergencies ring through",
-    body: "A fire alarm, not a doorbell. Mom at 2am gets through. Spam never does.",
+    name: "AFK Companion",
+    role: "Your digital wellbeing coach",
+    line: "Handles what you reach for, so leaving becomes a habit.",
+    features: [
+      {
+        illo: ChartIllo,
+        title: "It reads your week back",
+        body: "Not a chart of hours. Which apps you open with nothing behind them, and what that's costing you.",
+      },
+      {
+        illo: PalmIllo,
+        title: "It speaks up mid-scroll",
+        body: "Eight minutes in, nothing brought you here. Said while it's still happening, not the next morning.",
+      },
+      {
+        illo: FlagIllo,
+        title: "Your usage writes the mission",
+        body: "An hour unbroken in a feed writes tomorrow's walk. Nobody picks these off a list — a rule you crossed did.",
+      },
+      {
+        illo: MoonIllo,
+        title: "It knows when you're fried",
+        body: "Short sleep, long nights of replies? AFK schedules the break — then Guardian holds it.",
+      },
+    ],
   },
-  {
-    illo: CallIllo,
-    title: "Calls get a receptionist",
-    body: "AFK answers, takes a message, and books callbacks around your calendar.",
-  },
-  {
-    illo: DialIllo,
-    title: "You set the dial",
-    body: "From just watching to handling it all — per person, per app. Never money, never contracts.",
-  },
-  {
-    illo: FlagIllo,
-    title: "Missions worth leaving for",
-    body: "Phone-free dinners, morning walks, real streaks. Share the proof, not the screenshots.",
-  },
+];
+
+/* True of both halves, so they sit under both rather than inside one. */
+const shared = [
   {
     illo: InboxIllo,
     title: "A 20-second welcome back",
     body: "One tidy digest instead of 200 notifications. Anything it did, you can undo.",
-  },
-  {
-    illo: MoonIllo,
-    title: "It knows when you're fried",
-    body: "Short sleep, long nights of replies? AFK schedules the break — then guards it.",
   },
   {
     illo: LockIllo,
@@ -235,8 +270,8 @@ export default function Landing() {
                   but quieter.
                 </h1>
                 <p className="mx-auto mt-5 max-w-[38ch] text-[17px] leading-relaxed font-semibold text-ink-soft lg:mx-0">
-                  AFK holds your place while you're away — replying to what can
-                  wait, and ringing only for what can't.
+                  A guardian that holds your place while you're away — and a
+                  companion that notices what keeps pulling you back.
                 </p>
                 <div className="mt-8 flex flex-col items-center gap-3 lg:items-start">
                   <Link
@@ -269,26 +304,71 @@ export default function Landing() {
           <div data-scroll className="lg:h-full lg:overflow-y-auto">
             <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col justify-center px-5 pt-24 pb-20 lg:pt-20">
               <h2 className="text-center text-[1.9rem] leading-tight font-black tracking-tight sm:text-4xl">
-                It's got you covered.
+                Two halves of one problem.
               </h2>
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-                {features.map((f) => (
+              <p className="mx-auto mt-3 max-w-[52ch] text-center text-[15px] leading-relaxed font-semibold text-ink-soft">
+                You don't disconnect for two reasons: you're afraid of missing
+                something, and you keep reaching for it anyway. AFK ships a
+                system for each.
+              </p>
+
+              <div className="mt-8 grid gap-5 lg:grid-cols-2 lg:gap-6">
+                {pillars.map((p) => (
+                  <section key={p.name}>
+                    <div className="flex items-baseline gap-2.5">
+                      <h3 className="text-[19px] font-black tracking-tight sm:text-[22px]">
+                        {p.name}
+                      </h3>
+                      <p className="text-[12px] font-extrabold tracking-wide text-ink-faint uppercase">
+                        {p.role}
+                      </p>
+                    </div>
+                    <p className="mt-1 text-[14px] font-semibold text-ink-soft">
+                      {p.line}
+                    </p>
+                    <div className="mt-3.5 grid grid-cols-2 gap-3 sm:gap-4">
+                      {p.features.map((f) => (
+                        <article
+                          key={f.title}
+                          className="rounded-card border border-line bg-surface p-4 shadow-card transition-shadow duration-200 hover:shadow-pop sm:p-5"
+                        >
+                          <div className="mx-auto mb-3 w-[96px] sm:mb-4 sm:w-[120px]">
+                            <f.illo />
+                          </div>
+                          <h4 className="text-center text-[13.5px] leading-snug font-extrabold sm:text-[15px]">
+                            {f.title}
+                          </h4>
+                          <p className="mt-1.5 hidden text-center text-[12.5px] leading-relaxed font-semibold text-ink-soft sm:block">
+                            {f.body}
+                          </p>
+                          <p className="mt-1 text-center text-[11px] leading-relaxed font-semibold text-ink-soft sm:hidden">
+                            {f.body}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+
+              {/* Both halves, not one of them. */}
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:gap-4">
+                {shared.map((f) => (
                   <article
                     key={f.title}
-                    className="rounded-card border border-line bg-surface p-4 shadow-card transition-shadow duration-200 hover:shadow-pop sm:p-6"
+                    className="flex items-center gap-4 rounded-card border border-line bg-surface p-4 shadow-card transition-shadow duration-200 hover:shadow-pop"
                   >
-                    <div className="mx-auto mb-3 w-[96px] sm:mb-4 sm:w-[130px]">
+                    <div className="w-[76px] shrink-0 sm:w-[92px]">
                       <f.illo />
                     </div>
-                    <h3 className="text-center text-[13.5px] leading-snug font-extrabold sm:text-[16px]">
-                      {f.title}
-                    </h3>
-                    <p className="mt-1.5 hidden text-center text-[13px] leading-relaxed font-semibold text-ink-soft sm:block">
-                      {f.body}
-                    </p>
-                    <p className="mt-1 text-center text-[11px] leading-relaxed font-semibold text-ink-soft sm:hidden">
-                      {f.body}
-                    </p>
+                    <div className="min-w-0">
+                      <h4 className="text-[14px] leading-snug font-extrabold sm:text-[15px]">
+                        {f.title}
+                      </h4>
+                      <p className="mt-1 text-[12.5px] leading-relaxed font-semibold text-ink-soft">
+                        {f.body}
+                      </p>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -307,7 +387,8 @@ export default function Landing() {
                 </h2>
                 <p className="mx-auto mt-4 max-w-[36ch] text-[16px] leading-relaxed font-semibold text-ink-soft lg:mx-0">
                   Tap “Go AFK” and watch six real messages get read, judged, and
-                  handled — live. No signup, nothing sent.
+                  handled — live. Then open the simulated phone and doomscroll
+                  until Companion writes you a mission. No signup, nothing sent.
                 </p>
                 <Link
                   href="/demo"
@@ -406,7 +487,7 @@ export default function Landing() {
                       "Every app, every channel",
                       "Full autonomy — it can act for you",
                       "Front Desk answers your calls",
-                      "Missions, streaks & the feed",
+                      "Companion: rules, missions & the feed",
                     ].map((li) => (
                       <li key={li} className="flex items-center gap-2.5">
                         <IconCheck

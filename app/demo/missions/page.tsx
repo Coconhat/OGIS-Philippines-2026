@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useAfk } from "@/lib/afk-context";
 import { useDemoShell } from "@/lib/demo-shell";
-import { feed, missions, nudges, type Mission } from "@/lib/data";
+import {
+  feed,
+  missions,
+  nudges,
+  type CreatedMission,
+  type Mission,
+} from "@/lib/data";
 import { NavBar } from "@/components/ui/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Tile } from "@/components/ui/tile";
@@ -24,6 +30,7 @@ import {
   IconCheck,
   IconFlame,
   IconHeart,
+  IconTarget,
   IconZap,
 } from "@/components/icons";
 
@@ -41,6 +48,69 @@ const sceneLabel: Record<string, string> = {
   run: "🏃 morning air",
 };
 
+/* A mission that exists but isn't yours yet — the rule crossed, AFK
+   wrote it, and it's waiting for an answer. Used for both the ones
+   written in front of you tonight and the ones the weekly read wrote,
+   because they are the same object arriving by different clocks. */
+function WrittenMission({
+  mission: m,
+  created,
+  onAccept,
+  onDetails,
+}: {
+  mission: Mission;
+  created?: CreatedMission;
+  onAccept: () => void;
+  onDetails: () => void;
+}) {
+  const b = behaviourById(m.behaviourId);
+  const Glyph = b ? behaviourGlyphs[b.icon] : IconChart;
+
+  return (
+    <div className="rounded-tile bg-app-surface p-3.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p
+          className={`text-caption inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 font-bold tracking-wide uppercase ${chipTint[m.tint]}`}
+        >
+          <Glyph size={11} />
+          {b?.name ?? "Habit"}
+        </p>
+        <span className="text-caption text-label-3">
+          Written {created?.at ?? m.origin.createdAt}
+        </span>
+      </div>
+
+      <p className="text-headline mt-2 text-balance">{m.title}</p>
+      <p className="text-footnote mt-1 text-balance text-label-2">
+        {m.prescription}
+      </p>
+
+      {/* The line, then what crossed it. Without this a mission is just
+          advice with a checkbox. */}
+      <div className="mt-2.5 rounded-[10px] bg-fill-2 px-3 py-2.5">
+        <p className="text-caption flex items-center gap-1.5 font-bold tracking-wide text-label-2 uppercase">
+          <IconTarget size={11} />
+          The rule that wrote it
+        </p>
+        <p className="text-footnote mt-1 text-balance">{m.origin.threshold}</p>
+        <p className="text-caption mt-1 flex items-center gap-1.5 tabular-nums text-label-3">
+          <IconChart size={11} className="shrink-0" />
+          {created?.observed ?? m.origin.observed}
+        </p>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <Button variant="tinted" size="small" onPress={onAccept}>
+          Take this on
+        </Button>
+        <Button variant="plain" size="small" tint="ink" onPress={onDetails}>
+          Details
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function MissionsPage() {
   const { scrollRef } = useDemoShell();
   const {
@@ -48,6 +118,7 @@ export default function MissionsPage() {
     completeMission,
     acceptedMissions,
     acceptMission,
+    createdMissions,
     liked,
     toggleLiked,
     nudgeLog,
@@ -58,12 +129,21 @@ export default function MissionsPage() {
   const [tab, setTab] = useState<"challenges" | "feed">("challenges");
   const [detail, setDetail] = useState<Mission | null>(null);
 
-  /* A mission is on your list if it shipped active or you took it on.
-     Everything else is still a suggestion AFK generated from a habit. */
+  /* A mission is on your list once you take it on. Everything else was
+     written by a rule and is waiting for an answer — either a rule that
+     crossed in front of you tonight, or one that crossed on the weekly
+     read. A `created` mission that hasn't fired yet doesn't exist at
+     all, which is the point: your usage has to write it first. */
   const isMine = (m: Mission) =>
     m.status === "active" || acceptedMissions.includes(m.id);
+  const createdFor = (id: string) =>
+    createdMissions.find((c) => c.missionId === id);
+
   const active = missions.filter(isMine);
-  const suggested = missions.filter((m) => !isMine(m));
+  const writtenTonight = missions.filter((m) => !isMine(m) && createdFor(m.id));
+  const suggested = missions.filter(
+    (m) => !isMine(m) && !createdFor(m.id) && m.status === "suggested",
+  );
 
   const allDone = active.every((m) => completedMissions.includes(m.id));
 
@@ -87,7 +167,7 @@ export default function MissionsPage() {
     <>
       <NavBar
         title="Missions"
-        subtitle="Built from your own patterns."
+        subtitle="Written by your usage, not chosen from a list."
         scrollRef={scrollRef}
         trailing={
           <span className="text-footnote inline-flex items-center gap-1.5 rounded-pill bg-accent-dim px-3 py-1.5 font-bold text-accent-text">
@@ -149,7 +229,9 @@ export default function MissionsPage() {
                       subtitle={
                         r.outcome === "heeded"
                           ? "You closed the app. Streak intact."
-                          : "You stayed. The streak takes the hit."
+                          : r.outcome === "snoozed"
+                            ? "You asked for five more minutes."
+                            : "You stayed. The streak takes the hit."
                       }
                     />
                   );
@@ -157,11 +239,34 @@ export default function MissionsPage() {
               </List>
             )}
 
+            {/* Written while you were still in the app. This is the
+                whole mechanism in one card: you crossed a line, and a
+                mission existed before you put the phone down. */}
+            {writtenTonight.length > 0 && (
+              <section>
+                <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
+                  Written tonight, from what you just did
+                </h2>
+                <ul className="space-y-2.5">
+                  {writtenTonight.map((m) => (
+                    <li key={m.id}>
+                      <WrittenMission
+                        mission={m}
+                        created={createdFor(m.id)}
+                        onAccept={() => acceptMission(m.id)}
+                        onDetails={() => setDetail(m)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             {allDone ? (
               <EmptyState
                 illustration={<FlagIllo />}
                 title="All missions complete"
-                message="New ones generate from next week's Lens."
+                message="The next one gets written the next time your usage crosses a line."
               />
             ) : (
               <ul className="space-y-2.5">
@@ -170,6 +275,7 @@ export default function MissionsPage() {
                     <MissionRow
                       mission={m}
                       done={completedMissions.includes(m.id)}
+                      created={createdFor(m.id)}
                       onOpen={() => setDetail(m)}
                       onComplete={() => completeMission(m.id)}
                     />
@@ -178,64 +284,30 @@ export default function MissionsPage() {
               </ul>
             )}
 
-            {/* The generation loop, made visible. AFK spotted the habit
-                and wrote the mission; taking it on is your move. */}
+            {/* The same mechanism on a slower clock: these rules crossed
+                on the weekly read rather than in front of you. */}
             {suggested.length > 0 && (
               <section>
                 <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
-                  Generated from habits AFK spotted
+                  Written when your usage crossed a line this week
                 </h2>
                 <ul className="space-y-2.5">
-                  {suggested.map((m) => {
-                    const b = behaviourById(m.behaviourId);
-                    const Glyph = b ? behaviourGlyphs[b.icon] : IconChart;
-                    return (
-                      <li key={m.id}>
-                        <div className="rounded-tile bg-app-surface p-3.5">
-                          <p
-                            className={`text-caption inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 font-bold tracking-wide uppercase ${chipTint[m.tint]}`}
-                          >
-                            <Glyph size={11} />
-                            {b?.name ?? "Habit"}
-                          </p>
-                          <p className="text-headline mt-2 text-balance">
-                            {m.title}
-                          </p>
-                          <p className="text-footnote mt-1 text-balance text-label-2">
-                            {m.why}
-                          </p>
-                          <p className="text-caption mt-2 flex items-center gap-1.5 tabular-nums text-label-3">
-                            <IconChart size={11} className="shrink-0" />
-                            {m.evidence}
-                          </p>
-                          <div className="mt-3 flex items-center gap-2">
-                            <Button
-                              variant="tinted"
-                              size="small"
-                              onPress={() => acceptMission(m.id)}
-                            >
-                              Take this on
-                            </Button>
-                            <Button
-                              variant="plain"
-                              size="small"
-                              tint="ink"
-                              onPress={() => setDetail(m)}
-                            >
-                              Details
-                            </Button>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
+                  {suggested.map((m) => (
+                    <li key={m.id}>
+                      <WrittenMission
+                        mission={m}
+                        onAccept={() => acceptMission(m.id)}
+                        onDetails={() => setDetail(m)}
+                      />
+                    </li>
+                  ))}
                 </ul>
               </section>
             )}
 
             <p className="text-footnote px-1 text-center text-label-3 text-balance">
-              Missions aren&apos;t generic. Each one is generated from a habit
-              Lens measured on this device.
+              Nobody picks these off a list. Every one was written by a rule
+              your own usage crossed, measured on this device.
             </p>
           </>
         ) : (
@@ -363,15 +435,52 @@ export default function MissionsPage() {
                   </div>
                 </div>
 
-                {/* Full text — this used to truncate mid-sentence. */}
+                {/* What to actually do. It comes before the reasoning
+                    because a prescription you can't act on is a slogan. */}
                 <div className="mt-5 rounded-tile bg-fill-2 p-4">
                   <p className="text-caption flex items-center gap-1.5 font-bold tracking-wide text-label-2 uppercase">
+                    <IconTarget size={13} />
+                    What this does
+                  </p>
+                  <p className="text-subhead mt-1.5 text-balance">
+                    {detail.prescription}
+                  </p>
+                </div>
+
+                {/* The line, what crossed it, and when it was written —
+                    the three facts that make this a record rather than
+                    a suggestion. Full text; this used to truncate. */}
+                <div className="mt-3 rounded-tile bg-fill-2 p-4">
+                  <p className="text-caption flex items-center gap-1.5 font-bold tracking-wide text-label-2 uppercase">
                     <IconChart size={13} />
-                    Why this mission
+                    Why it exists
                   </p>
                   <p className="text-subhead mt-1.5 text-balance">
                     {detail.why}
                   </p>
+                  <dl className="mt-3 space-y-1.5 border-t border-separator pt-3">
+                    {[
+                      ["Rule", detail.origin.threshold],
+                      [
+                        "Measured",
+                        createdFor(detail.id)?.observed ??
+                          detail.origin.observed,
+                      ],
+                      [
+                        "Written",
+                        createdFor(detail.id)?.at ?? detail.origin.createdAt,
+                      ],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex gap-3">
+                        <dt className="text-caption w-[68px] shrink-0 font-bold tracking-wide text-label-3 uppercase">
+                          {k}
+                        </dt>
+                        <dd className="text-caption flex-1 text-balance text-label-2">
+                          {v}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                 </div>
 
                 {detail.steps.total > 1 && (

@@ -268,16 +268,16 @@ body {
 /* Frosted glass panel over the wallpaper (macOS menu style) */
 @utility glass {
   background: rgb(255 255 255 / 0.55);
-  backdrop-filter: blur(20px) saturate(1.6);
   -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
   border: 1px solid rgb(255 255 255 / 0.65);
   box-shadow: 0 8px 32px rgb(120 60 0 / 0.18);
 }
 
 @utility glass-faint {
   background: rgb(255 255 255 / 0.3);
-  backdrop-filter: blur(14px) saturate(1.4);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
   border: 1px solid rgb(255 255 255 / 0.4);
 }
 
@@ -301,10 +301,14 @@ body {
 /* ---- App chrome ---- */
 
 /* Nav bar / tab bar material, matching UIBlurEffect systemThinMaterial */
+/* Prefixed first, unprefixed last. Lightning CSS collapses a
+   `backdrop-filter` / `-webkit-backdrop-filter` pair down to one
+   declaration and was keeping the prefixed one, which Chrome ignores —
+   so every frosted bar in the app was rendering as flat 76% white. */
 @utility material-bar {
   background: rgb(249 249 251 / 0.76);
-  backdrop-filter: blur(var(--blur-regular)) saturate(1.8);
   -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(1.8);
+  backdrop-filter: blur(var(--blur-regular)) saturate(1.8);
 }
 
 /* Sub-pixel separators — box-shadow renders a true hairline where
@@ -359,11 +363,22 @@ body {
 }
 
 /* ---- Canvas ----
-   Flat systemGroupedBackground, exactly as iOS does it. The colour
-   lives in the cards, not the backdrop — that's what keeps this from
-   drifting back into a tinted-paper look. */
+   systemGroupedBackground, but with the quiet vertical depth iOS 17/18
+   actually renders — a hair lighter and cooler at the top, settling
+   into the grouped grey below. Flat #f2f2f7 read as dead off-white; this
+   keeps white cards popping while giving the surface somewhere to sit.
+   A whisper of cool light at the top-centre reads as a screen catching
+   ambient light rather than a painted panel. */
 @utility canvas-base {
   background-color: var(--color-app-bg);
+  background-image:
+    radial-gradient(
+      130% 80% at 50% -8%,
+      rgb(255 255 255 / 0.9) 0%,
+      rgb(248 249 252 / 0.5) 34%,
+      transparent 64%
+    ),
+    linear-gradient(180deg, #f4f5f8 0%, #eceef3 55%, #e7e9ef 100%);
 }
 
 /* A quiet dot field behind the Doorkeeper. The radial mask dissolves it

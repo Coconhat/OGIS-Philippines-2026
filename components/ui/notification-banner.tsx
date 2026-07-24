@@ -21,15 +21,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Nudge, NudgeAction } from "@/lib/data";
-import { nudgeTierTheme } from "@/lib/data";
+import { missionCreatedTheme, nudgeTierTheme } from "@/lib/data";
 import { Pressable } from "./pressable";
-import { Button } from "./button";
 import { MarkAfk } from "@/components/demo/sim-icons";
 import {
   IconAlertTriangle,
   IconClock,
   IconEye,
   IconMoon,
+  IconTarget,
   IconX,
 } from "@/components/icons";
 
@@ -38,6 +38,7 @@ const glyphs = {
   clock: IconClock,
   alertTriangle: IconAlertTriangle,
   moon: IconMoon,
+  target: IconTarget,
 };
 
 // If `animationend` never fires (background tab, interrupted animation)
@@ -64,7 +65,11 @@ export function NotificationBanner({
   const [drag, setDrag] = useState(0);
   const start = useRef<number | null>(null);
   const Glyph = glyphs[nudge.icon];
-  const theme = nudgeTierTheme[nudge.tier];
+  /* A written mission is not a fifth warning tier — it's the one thing
+     in this channel that hands you something, so it never borrows a
+     tier's colour. */
+  const written = nudge.kind === "missionCreated";
+  const theme = written ? missionCreatedTheme : nudgeTierTheme[nudge.tier];
 
   /* NudgeHost keys this on `nudge.id`, so a new nudge remounts and
      `phase`/`drag` start fresh. Don't drop that key — without it a
@@ -82,7 +87,7 @@ export function NotificationBanner({
     return () => clearTimeout(t);
   }, [autoDismiss, nudge.autoDismissMs, nudge.id]);
 
-  const urgent = nudge.tier >= 3;
+  const urgent = !written && nudge.tier >= 3;
 
   return (
     <div
@@ -108,84 +113,91 @@ export function NotificationBanner({
         start.current = null;
       }}
       style={drag ? { transform: `translateY(${drag}px)` } : undefined}
-      className={`rounded-tile mx-2.5 mt-2.5 overflow-hidden bg-app-surface shadow-float ring-1 ring-black/5 ${
+      className={`mx-2.5 mt-2.5 overflow-hidden rounded-[26px] bg-app-surface ring-1 ring-black/[0.06] shadow-[0_1px_2px_rgb(23_23_23/0.06),0_12px_32px_rgb(23_23_23/0.16)] ${
         phase === "out"
           ? "animate-[banner-out_.28s_var(--ease-ios)_both]"
           : "animate-[banner-in_.42s_var(--ease-spring)_both]"
       }`}
     >
-      {/* Tier stripe: colour, but never colour alone — the glyph in the
-          chip below carries the same meaning. */}
-      <div className={`h-1 w-full ${theme.stripe}`} />
-
-      <div className="p-3.5">
-        {/* The iOS notification header: app icon, app name, timestamp. */}
-        <div className="flex items-center gap-2">
+      <div className="p-4 pb-3.5">
+        {/* iOS notification header: real app icon, app name, timestamp. */}
+        <div className="flex items-center gap-2.5">
           <span
             aria-hidden
-            className="grid size-[18px] shrink-0 place-items-center rounded-[5px] text-accent-deep"
+            className="grid size-[30px] shrink-0 place-items-center rounded-[9px] text-white shadow-[0_1px_2px_rgb(180_90_0/0.35)]"
             style={{
               background:
-                "linear-gradient(180deg, #ffd9a8 0%, #ffab48 45%, #f07800 100%)",
+                "linear-gradient(155deg, #ffc07a 0%, #ff9d33 46%, #f07800 100%)",
             }}
           >
-            <MarkAfk size={13} />
+            <MarkAfk size={17} />
           </span>
-          <span className="text-caption font-bold tracking-wide text-label-2 uppercase">
+          <span className="text-[13px] font-extrabold tracking-tight text-label">
             AFK
           </span>
+          {/* Severity as a soft dot-chip — colour plus a glyph, never
+              colour alone. */}
           <span
-            className={`text-caption rounded-pill px-2 py-0.5 font-bold ${theme.chip}`}
+            className={`inline-flex items-center gap-1 rounded-pill px-2 py-[3px] text-[10.5px] font-bold ${theme.chip}`}
           >
+            <Glyph size={10} />
             {theme.label}
           </span>
-          <span className="text-caption ml-auto text-label-3">now</span>
+          <span className="ml-auto text-[12px] font-medium text-label-3">
+            now
+          </span>
           <Pressable
             onPress={() => setPhase("out")}
             aria-label="Dismiss notification"
             highlight="opacity"
-            className="-mr-1.5 grid size-11 shrink-0 place-items-center text-label-3"
+            className="-mr-1 grid size-7 shrink-0 place-items-center rounded-pill bg-fill-2 text-label-3"
           >
-            <IconX size={14} strokeWidth={2.6} />
+            <IconX size={12} strokeWidth={2.8} />
           </Pressable>
         </div>
 
-        <p className="text-headline mt-1.5 text-balance text-label">
+        <p className="mt-2.5 text-[15.5px] leading-snug font-bold tracking-tight text-balance text-label">
           {nudge.headline}
         </p>
-        <p className="text-footnote mt-1 text-balance text-label-2">
+        <p className="mt-1 text-[13.5px] leading-relaxed text-balance text-label-2">
           {nudge.body}
         </p>
 
-        {/* The measurement that earns the nudge. Nothing is asserted
-            that can't be pointed at. */}
-        <span
-          className={`text-caption mt-2.5 inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 font-bold tabular-nums ${theme.chip}`}
-        >
-          <Glyph size={11} />
+        {/* The measurement that earns the nudge — quiet, factual, the
+            number sitting right under the claim. */}
+        <span className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold tabular-nums text-label-3">
+          <span className={`size-1.5 rounded-pill ${theme.stripe}`} />
           {nudge.evidence}
         </span>
       </div>
 
-      {/* Actions are siblings of the body, never nested — a button
-          inside a tappable card is invalid HTML and wrecks keyboard
-          order. mission-row.tsx solves the same problem the same way. */}
+      {/* iOS interactive-notification actions: full-width, split by
+          hairlines. Siblings of the body, never nested — a button inside
+          a tappable card wrecks keyboard order. */}
       {nudge.actions.length > 0 && (
-        <div className="flex gap-2 border-t border-separator p-2.5">
-          {nudge.actions.map((a, i) => (
-            <Button
-              key={a.label}
-              /* `tinted` only — `filled` carries an internal
-                 shadow-raised, and the banner is already shadow-float. */
-              variant="tinted"
-              tint={i === 0 && urgent ? "coral" : i === 0 ? "accent" : "ink"}
-              size="small"
-              full
-              onPress={() => onAction(a)}
-            >
-              {a.label}
-            </Button>
-          ))}
+        <div className="grid border-t border-separator" style={{ gridTemplateColumns: `repeat(${nudge.actions.length}, 1fr)` }}>
+          {nudge.actions.map((a, i) => {
+            const primary = i === 0;
+            const tint = !primary
+              ? "font-semibold text-label-2"
+              : written
+                ? "font-bold text-mint-text"
+                : urgent
+                  ? "font-bold text-coral-text"
+                  : "font-bold text-accent-text";
+            return (
+              <button
+                key={a.label}
+                type="button"
+                onClick={() => onAction(a)}
+                className={`min-h-[50px] cursor-pointer px-3 text-[15px] transition-colors duration-150 active:bg-fill-2 ${
+                  i > 0 ? "border-l border-separator" : ""
+                } ${tint}`}
+              >
+                {a.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

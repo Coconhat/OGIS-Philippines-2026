@@ -494,6 +494,23 @@ export type BehaviourId =
   | "mealtime"
   | "workbleed";
 
+/* The line a behaviour has to cross before AFK writes a mission.
+
+   Without this, "generated from your behaviour" was a sentence rather
+   than a mechanism: `signal` says how something is watched, `evidence`
+   says what was measured, but nothing said *what crossing produces a
+   mission*. A mission with no threshold behind it is a self-help tip. */
+export type BehaviourRule = {
+  /** The line. Quoted verbatim on the mission it writes. */
+  threshold: string;
+  /** What the threshold is measured over. */
+  window: string;
+  /** What actually crossed it. */
+  observed: string;
+  /** When it crossed. */
+  crossedAt: string;
+};
+
 export type Behaviour = {
   id: BehaviourId;
   name: string;
@@ -503,6 +520,8 @@ export type Behaviour = {
   signal: string;
   /** The measurement this week — what earns the claim. */
   evidence: string;
+  /** The threshold that turns the measurement into a mission. */
+  rule: BehaviourRule;
   severity: "high" | "medium" | "low";
   icon: "flame" | "eye" | "clock" | "moon" | "sun" | "heart" | "zap";
 };
@@ -514,7 +533,13 @@ export const behaviours: Behaviour[] = [
     definition:
       "Long unbroken stretches in a feed, scrolling past far more than you stop to read.",
     signal: "Session length in feed apps, plus scroll distance without interaction.",
-    evidence: "9.5h in ShortReel · longest single run 47 min",
+    evidence: "9.5h in ShortReel · longest unbroken run 1h 52m",
+    rule: {
+      threshold: "60+ min unbroken in a feed app",
+      window: "any single session",
+      observed: "1h 52m in ShortReel · 3 runs over an hour",
+      crossedAt: "Tue 11:47pm",
+    },
     severity: "high",
     icon: "flame",
   },
@@ -525,6 +550,12 @@ export const behaviours: Behaviour[] = [
       "Opening an app when nothing asked you to. No notification, no message — just reflex.",
     signal: "Opens with no notification in the seconds before them.",
     evidence: "70% of ShortReel opens were unprompted",
+    rule: {
+      threshold: "60%+ of opens with nothing behind them",
+      window: "rolling 7 days",
+      observed: "70% of 214 opens · no notification",
+      crossedAt: "Fri 9:02am",
+    },
     severity: "high",
     icon: "eye",
   },
@@ -534,7 +565,13 @@ export const behaviours: Behaviour[] = [
     definition:
       "Phone use pushing your bedtime later, night after night.",
     signal: "Pickups after 10pm, measured against when you actually fell asleep.",
-    evidence: "23 pickups after 10pm · 5.8h average sleep",
+    evidence: "asleep after 12:40am, 4 of 7 nights · 23 pickups after 10pm",
+    rule: {
+      threshold: "asleep after midnight on 3+ nights",
+      window: "rolling 7 days",
+      observed: "asleep after 12:40am, 4 of 7 nights",
+      crossedAt: "Thu 12:52am",
+    },
     severity: "high",
     icon: "moon",
   },
@@ -545,6 +582,12 @@ export const behaviours: Behaviour[] = [
       "Answering work messages in hours that aren't work hours.",
     signal: "Work-app activity outside your stated working window.",
     evidence: "11 straight nights answering work messages",
+    rule: {
+      threshold: "work apps after 9pm on 5+ nights",
+      window: "rolling 7 days",
+      observed: "11 straight nights · latest reply 11:41pm",
+      crossedAt: "Wed 10:18pm",
+    },
     severity: "high",
     icon: "zap",
   },
@@ -555,6 +598,12 @@ export const behaviours: Behaviour[] = [
       "Cycling the same three or four apps in a loop, looking for something new in each.",
     signal: "Switch rate inside a short window, and repeated app sequences.",
     evidence: "9 switches in 4 minutes · same loop 6× this week",
+    rule: {
+      threshold: "8+ app switches inside 5 minutes",
+      window: "any single session",
+      observed: "9 switches in 4 min · same loop 6×",
+      crossedAt: "Tue 11:12pm",
+    },
     severity: "medium",
     icon: "clock",
   },
@@ -565,6 +614,12 @@ export const behaviours: Behaviour[] = [
       "Reaching for the phone while you're with people.",
     signal: "Usage during meals and calendar events marked social.",
     evidence: "Slack checked 14× during dinners last week",
+    rule: {
+      threshold: "phone picked up during 3+ meals",
+      window: "rolling 7 days",
+      observed: "Slack checked 14× across 6 dinners",
+      crossedAt: "Sun 7:34pm",
+    },
     severity: "medium",
     icon: "heart",
   },
@@ -575,6 +630,12 @@ export const behaviours: Behaviour[] = [
       "The phone is the first thing you touch, before you're properly awake.",
     signal: "Gap between your alarm going off and your first pickup.",
     evidence: "Phone in hand within 4 min of waking, 6 of 7 days",
+    rule: {
+      threshold: "phone within 5 min of waking, 4+ mornings",
+      window: "rolling 7 days",
+      observed: "within 4 min, 6 of 7 mornings",
+      crossedAt: "Mon 6:44am",
+    },
     severity: "medium",
     icon: "sun",
   },
@@ -593,17 +654,37 @@ export const severityTheme: Record<
   low: { chip: "bg-fill-2 text-label-2", label: "Minor" },
 };
 
+/* Why a mission exists, copied off the rule at the moment it fired.
+
+   Denormalised on purpose: a mission is a *record of a crossing*, so it
+   has to keep the numbers that were true when it was written, even
+   after next week's Lens moves them. */
+export type MissionOrigin = {
+  /** The line that was crossed, quoted from the behaviour's rule. */
+  threshold: string;
+  /** What crossed it. */
+  observed: string;
+  /** When AFK wrote the mission. */
+  createdAt: string;
+};
+
 export type Mission = {
   id: string;
   title: string;
+  /** What to actually do. A mission is a prescription, not a challenge. */
+  prescription: string;
   why: string;
-  /** The behaviour this mission treats. Missions are generated from
-      detected behaviour — this is the join, not decoration. */
+  /** The behaviour this mission treats. Missions are written when a
+      behaviour crosses its rule — this is the join, not decoration. */
   behaviourId: BehaviourId;
+  /** The crossing that wrote it. */
+  origin: MissionOrigin;
   /** The measurement that generated it. */
   evidence: string;
-  /** `suggested` missions were generated but not yet taken on. */
-  status: "active" | "suggested";
+  /** `active` shipped on your list · `suggested` means the rule crossed
+      on a weekly read and it's waiting for you · `created` means it is
+      written live, the moment its rule crosses in front of you. */
+  status: "active" | "suggested" | "created";
   reward: string;
   progress: number; // 0..1
   goal: string;
@@ -624,9 +705,15 @@ export const missions: Mission[] = [
   {
     id: "m1",
     title: "No social apps after 11pm",
-    why: "Generated from your Lens: 70% of your late-night opens had no notification behind them.",
+    prescription: "Feed apps lock at 11pm. AFK holds the door until morning.",
+    why: "Written Thu 12:52am — four nights this week you fell asleep after 12:40am, and the phone was the last thing you put down each time.",
     behaviourId: "latenight",
-    evidence: "23 pickups after 10pm · 5.8h average sleep",
+    origin: {
+      threshold: "asleep after midnight on 3+ nights",
+      observed: "asleep after 12:40am, 4 of 7 nights",
+      createdAt: "Thu 12:52am",
+    },
+    evidence: "asleep after 12:40am, 4 of 7 nights · 23 pickups after 10pm",
     status: "active",
     reward: "+3h reclaimed · Night Owl badge",
     progress: 2 / 3,
@@ -641,8 +728,14 @@ export const missions: Mission[] = [
   {
     id: "m2",
     title: "One phone-free dinner",
-    why: "You checked Slack 14 times during dinners last week.",
+    prescription: "One meal this week with the phone in another room. AFK takes messages while you eat.",
+    why: "Written Sun 7:34pm — you crossed the 3-meal line six dinners in, checking Slack 14 times across them.",
     behaviourId: "mealtime",
+    origin: {
+      threshold: "phone picked up during 3+ meals",
+      observed: "Slack checked 14× across 6 dinners",
+      createdAt: "Sun 7:34pm",
+    },
     evidence: "Slack checked 14× during dinners last week",
     status: "active",
     reward: "+2h reclaimed · Present badge",
@@ -655,33 +748,50 @@ export const missions: Mission[] = [
     schedule: "This week",
     points: "+2h",
   },
+  /* The one you watch get written. It does not ship on the list — it
+     exists only after `missionRules` catches you crossing the hour in a
+     feed, which is the whole argument: the usage writes the mission.
+     `origin` here is the fallback copy; the live crossing overwrites it
+     with tonight's actual number (see `createdMissions`). */
   {
     id: "m3",
-    title: "Replace the Sunday scroll with a walk",
-    why: "Sunday 9–11am is your longest doomscroll window.",
+    title: "Swap tomorrow's scroll for a 20-minute walk",
+    prescription: "Twenty minutes outside before ShortReel opens again. AFK holds the app until you're back.",
+    why: "Written the moment you crossed an hour unbroken in ShortReel — the third run over an hour this week.",
     behaviourId: "doomscroll",
-    evidence: "9.5h in ShortReel · longest single run 47 min",
-    status: "active",
+    origin: {
+      threshold: "60+ min unbroken in a feed app",
+      observed: "1h 02m unbroken",
+      createdAt: "tonight",
+    },
+    evidence: "9.5h in ShortReel · longest unbroken run 1h 52m",
+    status: "created",
     reward: "+2h reclaimed · Fresh Air badge",
     progress: 0,
-    goal: "Sunday morning",
+    goal: "Tomorrow",
     icon: "sun",
     steps: { total: 1, done: 0 },
-    tint: "accent",
-    emoji: "🌤️",
-    schedule: "Sunday morning",
+    tint: "mint",
+    emoji: "🚶",
+    schedule: "Tomorrow · before 6pm",
     points: "+2h",
   },
 
-  /* Generated from behaviours Lens has flagged but you haven't taken on
-     yet. Keeping these unaccepted is what makes the generation visible —
-     if every mission were already active, "AFK noticed this and made you
-     a mission" would be a claim rather than something you watch happen. */
+  /* Rules that crossed on the weekly read rather than in front of you.
+     Keeping these unaccepted is what makes the mechanism visible — if
+     every mission were already active, "your usage wrote this" would be
+     a claim rather than something you watch happen. */
   {
     id: "m4",
     title: "Leave the phone out of the bedroom",
-    why: "Your phone is the first thing you touch, 6 mornings out of 7 — and the last thing you put down.",
+    prescription: "Charge it in the next room. The alarm still works; the reflex doesn't.",
+    why: "Written Mon 6:44am — you reached for it within 4 minutes of waking on 6 of 7 mornings, past the 4-morning line.",
     behaviourId: "morningreach",
+    origin: {
+      threshold: "phone within 5 min of waking, 4+ mornings",
+      observed: "within 4 min, 6 of 7 mornings",
+      createdAt: "Mon 6:44am",
+    },
     evidence: "Phone in hand within 4 min of waking, 6 of 7 days",
     status: "suggested",
     reward: "+4h reclaimed · Clear Head badge",
@@ -697,8 +807,14 @@ export const missions: Mission[] = [
   {
     id: "m5",
     title: "No work apps after 7pm",
-    why: "You've answered work messages 11 nights running, on 5.8 hours of sleep.",
+    prescription: "Slack and Mail go quiet at 7pm. AFK answers them at Level 1 until morning.",
+    why: "Written Wed 10:18pm — 11 straight nights answering work messages, more than double the 5-night line.",
     behaviourId: "workbleed",
+    origin: {
+      threshold: "work apps after 9pm on 5+ nights",
+      observed: "11 straight nights · latest reply 11:41pm",
+      createdAt: "Wed 10:18pm",
+    },
     evidence: "11 straight nights answering work messages",
     status: "suggested",
     reward: "+5h reclaimed · Off The Clock badge",
@@ -714,8 +830,14 @@ export const missions: Mission[] = [
   {
     id: "m6",
     title: "Open ShortReel on purpose, not on reflex",
-    why: "70% of your opens had nothing behind them. This one asks you to name why before it lets you in.",
+    prescription: "A one-line prompt before it opens: name what you came for. Nothing to name, nothing to open.",
+    why: "Written Fri 9:02am — 70% of 214 opens had nothing behind them, past the 60% line.",
     behaviourId: "phantom",
+    origin: {
+      threshold: "60%+ of opens with nothing behind them",
+      observed: "70% of 214 opens · no notification",
+      createdAt: "Fri 9:02am",
+    },
     evidence: "70% of ShortReel opens were unprompted",
     status: "suggested",
     reward: "+3h reclaimed · Deliberate badge",
@@ -729,6 +851,15 @@ export const missions: Mission[] = [
     points: "+3h",
   },
 ];
+
+export function missionById(id: string) {
+  return missions.find((m) => m.id === id);
+}
+
+/** The mission a behaviour's rule writes when it crosses. */
+export function missionForBehaviour(id: BehaviourId) {
+  return missions.find((m) => m.behaviourId === id);
+}
 
 export type FeedPost = {
   id: string;
@@ -863,7 +994,10 @@ export type NudgeTier = 1 | 2 | 3 | 4;
 
 export type NudgeAction = {
   label: string;
-  kind: "dismiss" | "snooze" | "mission" | "goAfk";
+  /** `close` leaves the feed (back to the home screen) and counts as
+      heeded — the "you actually stopped" outcome, without a mission
+      attached. */
+  kind: "dismiss" | "snooze" | "mission" | "goAfk" | "acceptMission" | "close";
 };
 
 /* What actually earns each nudge. These are conditions on real signals
@@ -880,10 +1014,14 @@ export type Nudge = {
   id: string;
   trigger: NudgeTrigger;
   tier: NudgeTier;
+  /** A warning about what you're doing, or AFK handing you a mission it
+      just wrote. Same delivery, opposite vector — so the mission notice
+      never wears a warning tier's colour. */
+  kind?: "nudge" | "missionCreated";
   /** The behaviour that earns it. */
   when: NudgeCondition;
   /** Colour never carries meaning alone — every tier ships a glyph. */
-  icon: "eye" | "clock" | "alertTriangle" | "moon";
+  icon: "eye" | "clock" | "alertTriangle" | "moon" | "target";
   headline: string;
   body: string;
   /** The measurement behind the claim. */
@@ -906,18 +1044,23 @@ export type NudgeRecord = {
   missionId?: string;
 };
 
+/* One escalation, all about the reels session you're in right now. It
+   starts by noticing, gets firmer as the minutes stack up, and — if you
+   keep going past an hour — ends with `missionRules` handing you a
+   mission. Nothing here references a streak or a mission you haven't
+   set; the behaviour in front of you is the whole story. */
 export const nudges: Nudge[] = [
   {
     id: "n1",
     trigger: "doomscroll",
     tier: 1,
-    // You scrolled past a couple of screenfuls without stopping.
+    // A couple of screenfuls in without stopping on anything.
     when: { kind: "scroll", screens: 2 },
     icon: "eye",
-    headline: "You've been in ShortReel for 8 minutes.",
-    body: "Nothing brought you here. No notification, no message.",
-    evidence: "8 min · 0 notifications",
-    actions: [{ label: "Okay", kind: "dismiss" }],
+    headline: "You've been scrolling ShortReel for 8 minutes.",
+    body: "Nothing brought you here — no notification, no message. Just reflex.",
+    evidence: "8 min · nothing behind it",
+    actions: [{ label: "Got it", kind: "dismiss" }],
     present: "banner",
     autoDismissMs: 5000,
   },
@@ -925,14 +1068,14 @@ export const nudges: Nudge[] = [
     id: "n2",
     trigger: "churn",
     tier: 2,
-    // You bounced between apps and came back. That's the loop.
+    // You bounced out to other apps and came straight back.
     when: { kind: "switches", count: 3 },
     icon: "clock",
-    headline: "Nine app switches in four minutes.",
-    body: "ShortReel → Mail → Slack → ShortReel. Same loop as last Tuesday.",
+    headline: "Same three apps, on a loop.",
+    body: "ShortReel → Mail → Slack → ShortReel. That's nine switches in four minutes, all landing back here.",
     evidence: "9 switches · 4 min",
     actions: [
-      { label: "Okay", kind: "dismiss" },
+      { label: "Got it", kind: "dismiss" },
       { label: "Mute for an hour", kind: "snooze" },
     ],
     present: "banner",
@@ -940,40 +1083,103 @@ export const nudges: Nudge[] = [
   },
   {
     id: "n3",
-    trigger: "latenight",
+    trigger: "doomscroll",
     tier: 3,
-    // You've now been in there long enough to cross your own line.
+    // Twenty unbroken minutes in the feed.
     when: { kind: "dwell", seconds: 20 },
-    icon: "alertTriangle",
-    headline: "It's 11:26pm — night 3 of your mission.",
-    body: "“No social apps after 11pm.” You're two nights in. This is the one that breaks the streak.",
-    evidence: "26 min past your line",
-    missionId: "m1",
+    icon: "clock",
+    headline: "20 minutes straight in ShortReel.",
+    body: "No breaks, nothing you were looking for. Want to close it before it turns into an hour?",
+    evidence: "20 min · no breaks",
     actions: [
-      { label: "Close ShortReel", kind: "mission" },
+      { label: "Close ShortReel", kind: "close" },
       { label: "Five more minutes", kind: "snooze" },
     ],
     present: "banner",
-    // Tier 3 puts a mission on the table. It waits for an answer.
     autoDismissMs: null,
   },
   {
     id: "n4",
-    trigger: "latenight",
+    trigger: "doomscroll",
     tier: 4,
-    // And you stayed anyway.
+    // Half an hour in, and still going.
     when: { kind: "dwell", seconds: 38 },
     icon: "moon",
-    headline: "26 minutes. Tonight's mission is gone.",
-    body: "I can hold the door until 7am, the way I did the last two nights.",
-    evidence: "Streak 2 → 0",
-    missionId: "m1",
+    headline: "Half an hour of ShortReel, back to back.",
+    body: "You opened it after 11 and haven't put it down. I can lock it and hold your notifications until morning — say the word.",
+    evidence: "26 min · after 11pm",
     actions: [
-      { label: "Go AFK until 7am", kind: "goAfk" },
+      { label: "Lock it till 7am", kind: "goAfk" },
       { label: "Keep scrolling", kind: "dismiss" },
     ],
-    present: "alert",
+    present: "banner",
     autoDismissMs: null,
+  },
+];
+
+/* ---- Mission rules ----------------------------------------------------
+   Where missions come from. A rule watches the same live signals the
+   nudges do; crossing it doesn't warn you, it *writes a mission* —
+   an hour unbroken in a feed buys you a walk tomorrow.
+
+   Nudges defend a mission that already exists. This is the step before
+   that: the behaviour producing the mission in the first place. */
+
+/* A mission written in front of you, stamped with the measurement that
+   wrote it. The static `Mission.origin` is the fallback; this is what
+   actually happened tonight. */
+export type CreatedMission = {
+  missionId: string;
+  ruleId: string;
+  /** What crossed the line, measured at the moment it crossed. */
+  observed: string;
+  /** Fiction clock time of the crossing. */
+  at: string;
+};
+
+export type MissionRule = {
+  id: string;
+  behaviourId: BehaviourId;
+  /** The mission this crossing writes. */
+  missionId: string;
+  /** The line, expressed in signals the simulator actually emits. */
+  when: NudgeCondition;
+  /** The same line in words, quoted on the mission it writes. */
+  threshold: string;
+  /** What AFK posts the moment it crosses. `evidence` is replaced at
+      fire time with the measurement that actually crossed it. */
+  notice: Nudge;
+};
+
+/* 90 seconds of dwell is 60 fiction minutes (see
+   FICTION_MINUTES_PER_SECOND in nudge-context) — so you have to ignore
+   the hard stop and keep scrolling to get here, which is exactly the
+   behaviour the mission treats. */
+export const missionRules: MissionRule[] = [
+  {
+    id: "r-doomscroll",
+    behaviourId: "doomscroll",
+    missionId: "m3",
+    when: { kind: "dwell", seconds: 90 },
+    threshold: "60+ min unbroken in a feed app",
+    notice: {
+      id: "r-doomscroll",
+      trigger: "doomscroll",
+      tier: 1,
+      kind: "missionCreated",
+      when: { kind: "dwell", seconds: 90 },
+      icon: "target",
+      headline: "A full hour in ShortReel. Here's a mission.",
+      body: "That's your third run past an hour this week. Tomorrow: a 20-minute walk before ShortReel opens — I'll hold the app until you're back.",
+      evidence: "1h straight · 3rd this week",
+      missionId: "m3",
+      actions: [
+        { label: "Take it on", kind: "acceptMission" },
+        { label: "Not now", kind: "dismiss" },
+      ],
+      present: "banner",
+      autoDismissMs: null,
+    },
   },
 ];
 
@@ -993,13 +1199,22 @@ export const nudgeTierTheme: Record<
   3: {
     chip: "bg-coral-dim text-coral-text",
     stripe: "bg-coral",
-    label: "Mission at stake",
+    label: "Still scrolling",
   },
   4: {
     chip: "bg-coral-dim text-coral-text",
     stripe: "bg-coral",
     label: "Hard stop",
   },
+};
+
+/* Not a fifth tier. The four tiers escalate a warning; this one hands
+   you something — so it reads mint, the way every other "AFK did a
+   thing for you" surface in the app does. */
+export const missionCreatedTheme = {
+  chip: "bg-mint-dim text-mint-text",
+  stripe: "bg-mint",
+  label: "Mission written",
 };
 
 /* The fake phone the simulator puts you inside: a home screen you tap
@@ -1074,6 +1289,23 @@ export const simApps: SimApp[] = [
     stub: "You're already here.",
   },
 ];
+
+/* The sim opens at 11:04pm. A mission written 60 fiction minutes in is
+   stamped 12:04am — and crossing midnight inside a feed is the point,
+   so the timestamp has to be computed rather than guessed. */
+const SIM_START_MINUTES = 23 * 60 + 4;
+
+export function simClockAt(minutesInApp: number) {
+  const total = (SIM_START_MINUTES + minutesInApp) % (24 * 60);
+  const h24 = Math.floor(total / 60);
+  const h = h24 % 12 === 0 ? 12 : h24 % 12;
+  const mm = String(total % 60).padStart(2, "0");
+  return `${h}:${mm}${h24 < 12 ? "am" : "pm"}`;
+}
+
+export function formatMinutes(mins: number) {
+  return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
+}
 
 export const simSession = {
   app: "ShortReel",

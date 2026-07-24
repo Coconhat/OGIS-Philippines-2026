@@ -21,6 +21,7 @@ import {
   asLevelId,
   breakthroughContacts,
   durations,
+  type CreatedMission,
   type LevelId,
   type NudgeRecord,
   type ResolvedEvent,
@@ -38,9 +39,12 @@ type Persisted = {
   startedAt: number | null;
   handled: ResolvedEvent[];
   completedMissions: string[];
-  /** Suggested missions the user has taken on. Missions are generated
-      from detected behaviour; accepting one is how that becomes real. */
+  /** Missions the user has taken on. A mission is written by a rule
+      crossing; accepting one is how it becomes yours. */
   acceptedMissions: string[];
+  /** Missions written live, when usage crossed a rule in front of you.
+      Carries the measurement that wrote it, not just the id. */
+  createdMissions: CreatedMission[];
   guardian: GuardianState;
   decisions: Record<string, string>;
   undone: string[];
@@ -65,6 +69,7 @@ const initial: Persisted = {
   handled: [],
   completedMissions: [],
   acceptedMissions: [],
+  createdMissions: [],
   guardian: "pending",
   decisions: {},
   undone: [],
@@ -83,8 +88,12 @@ const initial: Persisted = {
    demo run is more confusing than a fresh one.
 
    v4: added `acceptedMissions` when missions became derived from
-   behaviours. Same reasoning as v3 — discard rather than half-migrate. */
-const KEY = "afk-demo-v4";
+   behaviours. Same reasoning as v3 — discard rather than half-migrate.
+
+   v5: added `createdMissions` when missions stopped being a catalog and
+   became records written by a rule crossing. A v4 blob would hydrate a
+   mission list with no origins in it. Discard. */
+const KEY = "afk-demo-v5";
 
 function readSession(): Persisted | null {
   try {
@@ -108,6 +117,7 @@ type AfkState = Persisted & {
   pushNudge: (record: NudgeRecord) => void;
   completeMission: (id: string) => void;
   acceptMission: (id: string) => void;
+  createMission: (record: CreatedMission) => void;
   setGuardian: (state: GuardianState) => void;
   setDecision: (id: string, outcome: string) => void;
   toggleUndone: (id: string) => void;
@@ -229,6 +239,19 @@ export function AfkProvider({ children }: { children: ReactNode }) {
     [patch],
   );
 
+  /* Written by the rule engine, not by a tap — so it has to be
+     idempotent: the rule stays crossed for as long as you stay in the
+     app, and re-firing would stack duplicate rows on the Missions tab. */
+  const createMission = useCallback(
+    (record: CreatedMission) =>
+      patch((p) =>
+        p.createdMissions.some((m) => m.missionId === record.missionId)
+          ? {}
+          : { createdMissions: [record, ...p.createdMissions] },
+      ),
+    [patch],
+  );
+
   const setGuardian = useCallback(
     (guardian: GuardianState) => patch({ guardian }),
     [patch],
@@ -291,6 +314,7 @@ export function AfkProvider({ children }: { children: ReactNode }) {
       pushNudge,
       completeMission,
       acceptMission,
+      createMission,
       setGuardian,
       setDecision,
       toggleUndone,
@@ -308,6 +332,7 @@ export function AfkProvider({ children }: { children: ReactNode }) {
       pushNudge,
       completeMission,
       acceptMission,
+      createMission,
       setGuardian,
       setDecision,
       toggleUndone,

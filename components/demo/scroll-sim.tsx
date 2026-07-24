@@ -329,7 +329,7 @@ export function ScrollSim() {
           )}
           <Pressable
             onPress={step}
-            aria-label="Force the next nudge"
+            aria-label="Force the next beat"
             highlight="opacity"
             className="grid size-9 place-items-center text-white/70"
           >

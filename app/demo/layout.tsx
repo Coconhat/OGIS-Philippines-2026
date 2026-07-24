@@ -7,6 +7,7 @@ import { NudgeProvider } from "@/lib/nudge-context";
 import { DemoShellContext } from "@/lib/demo-shell";
 import { briefingDecisions } from "@/lib/data";
 import { NudgeHost } from "@/components/demo/nudge-host";
+import { PillarSwitch } from "@/components/demo/pillar-switch";
 import { ScrollSim } from "@/components/demo/scroll-sim";
 import { TabBar, type Tab } from "@/components/ui/tab-bar";
 import {
@@ -62,7 +63,7 @@ function Shell({ children }: { children: ReactNode }) {
 
   return (
     <DemoShellContext.Provider value={shell}>
-      <div className="canvas-base relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden pt-[env(safe-area-inset-top)] ring-1 ring-separator">
+      <div className="canvas-base relative flex h-dvh w-full max-w-[430px] flex-col overflow-hidden pt-[env(safe-area-inset-top)] ring-1 ring-separator">
         <a
           href="#main"
           className="text-footnote sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-app-surface focus:px-3 focus:py-2"
@@ -106,7 +107,12 @@ export default function DemoLayout({ children }: { children: ReactNode }) {
   return (
     <AfkProvider>
       <NudgeProvider>
-        <Shell>{children}</Shell>
+        {/* The phone, centred, with the Guardian/Companion switch living
+            in the margin beside it rather than on top of the screen. */}
+        <div className="relative flex h-dvh w-full justify-center">
+          <Shell>{children}</Shell>
+          <PillarSwitch />
+        </div>
       </NudgeProvider>
     </AfkProvider>
   );

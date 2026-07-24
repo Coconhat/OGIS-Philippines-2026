@@ -1,12 +1,12 @@
 "use client";
 
-/* What AFK noticed, and what it wants to do about it.
+/* What AFK noticed, the line it crossed, and the mission that wrote.
 
    The chain this closes: Lens detects a behaviour → the behaviour
-   generates a mission → a live nudge fires when the behaviour recurs,
-   naming the mission at stake → the Briefing reports what you did.
-   This sheet is the hinge — the place where "we noticed this" becomes
-   "so here's a mission". */
+   crosses its rule → the crossing writes a mission → a live nudge fires
+   when the behaviour recurs, naming the mission at stake → the Briefing
+   reports what you did. This sheet is the hinge — the place where "we
+   measured this" becomes "so this got written". */
 
 import { missions, severityTheme, type Behaviour } from "@/lib/data";
 import { Sheet } from "@/components/ui/sheet";
@@ -87,7 +87,12 @@ export function BehaviourSheet({
             </div>
           </div>
 
-          <List header="What AFK measured">
+          {/* The line first, then what crossed it. Reversed, this reads
+              as a statistic in search of a lesson. */}
+          <List
+            header="The rule"
+            footer={`Crossed ${b.rule.crossedAt}. Crossing is what writes the mission — nothing here is on a schedule.`}
+          >
             <Row
               size="tall"
               wrap
@@ -96,8 +101,19 @@ export function BehaviourSheet({
                   <IconTarget size={16} />
                 </RowIcon>
               }
-              title={b.evidence}
-              subtitle="This week"
+              title={b.rule.threshold}
+              subtitle={`Measured over ${b.rule.window}`}
+            />
+            <Row
+              size="tall"
+              wrap
+              leading={
+                <RowIcon tint={b.severity === "high" ? "coral" : "accent"}>
+                  <IconAlertTriangle size={16} />
+                </RowIcon>
+              }
+              title={b.rule.observed}
+              subtitle="What crossed it"
             />
             <Row
               size="tall"
@@ -115,11 +131,14 @@ export function BehaviourSheet({
           {mission && (
             <section>
               <h2 className="text-footnote px-4 pt-1 pb-1.5 font-medium text-label-2">
-                The mission this generated
+                The mission this crossing wrote
               </h2>
               <div className="rounded-group bg-app-surface p-4">
                 <p className="text-headline text-balance">{mission.title}</p>
                 <p className="text-footnote mt-1.5 text-balance text-label-2">
+                  {mission.prescription}
+                </p>
+                <p className="text-caption mt-2 text-balance text-label-3">
                   {mission.why}
                 </p>
                 <p className="text-caption mt-3 inline-flex items-center gap-1.5 rounded-pill bg-mint-dim px-2.5 py-1 font-bold text-mint-text">

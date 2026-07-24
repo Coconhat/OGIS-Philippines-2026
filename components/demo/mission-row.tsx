@@ -9,7 +9,11 @@
    inside a tappable card would be invalid HTML and would break keyboard
    order. */
 
-import { behaviourById, type Mission } from "@/lib/data";
+import {
+  behaviourById,
+  type CreatedMission,
+  type Mission,
+} from "@/lib/data";
 import { Pressable } from "@/components/ui/pressable";
 import { IconCheck, IconZap } from "@/components/icons";
 
@@ -39,6 +43,10 @@ export const labelTint: Record<MissionTint, string> = {
 type MissionRowProps = {
   mission: Mission;
   done: boolean;
+  /** Present when this mission was written live — carries the stamp and
+      the measurement from the crossing you just caused, which beats the
+      static fallback in `mission.origin`. */
+  created?: CreatedMission;
   /** Optional so display-only renders (the capture harness) can omit it. */
   onComplete?: () => void;
   /** Either open a sheet in place, or navigate to the Missions tab. */
@@ -49,11 +57,13 @@ type MissionRowProps = {
 export function MissionRow({
   mission: m,
   done,
+  created,
   onComplete,
   onOpen,
   href,
 }: MissionRowProps) {
   const dotsDone = done ? m.steps.total : m.steps.done;
+  const writtenAt = created?.at ?? m.origin.createdAt;
 
   return (
     <div
@@ -76,13 +86,14 @@ export function MissionRow({
         </span>
 
         <span className="min-w-0 flex-1">
-          {/* Schedule *and* the habit this treats — a mission with no
+          {/* When it was written and what wrote it — a mission with no
               visible cause reads as a generic self-help tip, which is
-              exactly what these are not. */}
+              exactly what these are not. The schedule is chrome; the
+              crossing is the reason the thing exists, so it goes first. */}
           <span
             className={`text-caption block font-bold tracking-wide uppercase ${labelTint[m.tint]}`}
           >
-            {m.schedule}
+            Written {writtenAt}
             {behaviourById(m.behaviourId) && (
               <span className="font-semibold normal-case opacity-70">
                 {" · "}
@@ -111,12 +122,12 @@ export function MissionRow({
                 ))}
               </span>
             )}
-            <span className="text-footnote text-label-2">
+            <span className="text-footnote truncate text-label-2">
               {done
                 ? "Done · shared to feed"
                 : m.steps.total > 1
-                  ? `${m.steps.done} of ${m.steps.total}`
-                  : m.goal}
+                  ? `${m.steps.done} of ${m.steps.total} · ${m.schedule}`
+                  : m.schedule}
             </span>
             <span className="text-footnote inline-flex items-center gap-0.5 font-bold text-accent-text">
               {m.points}

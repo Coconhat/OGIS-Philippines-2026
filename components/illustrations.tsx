@@ -166,6 +166,54 @@ export function InboxIllo() {
   );
 }
 
+/* Companion's read-back: bars, with the one that crossed the line in
+   orange. The dashed rule is the line — the whole feature in one shape. */
+export function ChartIllo() {
+  return (
+    <svg viewBox="0 0 200 120" style={frame} aria-hidden>
+      <rect x="42" y="72" width="20" height="32" rx="6" fill={g2} />
+      <rect x="70" y="56" width="20" height="48" rx="6" fill={g2} />
+      <rect x="98" y="30" width="20" height="74" rx="6" fill={orange} />
+      <rect x="126" y="64" width="20" height="40" rx="6" fill={g2} />
+      <rect x="154" y="80" width="20" height="24" rx="6" fill={g3} opacity="0.7" />
+      <path
+        className="anim-pulse"
+        d="M34 44h140"
+        stroke={orangeSoft}
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray="10 9"
+        fill="none"
+      />
+      <circle className="anim-pop" cx="108" cy="20" r="9" fill={orangeSoft} />
+    </svg>
+  );
+}
+
+/* The interruption: a hand up mid-scroll. Grey feed behind, orange stop
+   in front — Companion speaking while it's still happening. */
+export function PalmIllo() {
+  return (
+    <svg viewBox="0 0 200 120" style={frame} aria-hidden>
+      <rect x="46" y="16" width="60" height="88" rx="12" fill={g1} />
+      <rect x="56" y="28" width="40" height="7" rx="3.5" fill={g3} />
+      <rect x="56" y="42" width="30" height="7" rx="3.5" fill={g3} opacity="0.6" />
+      <rect x="56" y="56" width="40" height="7" rx="3.5" fill={g3} opacity="0.4" />
+      <g className="anim-bob">
+        <path
+          d="M118 96V62a8 8 0 0 1 16 0V44a8 8 0 0 1 16 0v18a8 8 0 0 1 16 0v30a14 14 0 0 1-14 14h-20a14 14 0 0 1-14-14z"
+          fill={orange}
+        />
+        <path
+          d="M118 74V56a8 8 0 0 0-16 0v26c0 6 4 10 10 12"
+          fill={orange}
+          opacity="0.75"
+        />
+      </g>
+    </svg>
+  );
+}
+
 export function LockIllo() {
   return (
     <svg viewBox="0 0 200 120" style={frame} aria-hidden>
